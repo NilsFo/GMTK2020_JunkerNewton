@@ -30,7 +30,7 @@ class Game:
     def __init__(self, screen):
         self.debug_font = pygame.font.Font("assets/fonts/FiraSans-Regular.ttf", 12)
 
-        self.current_screen: Level = None
+        self.current_screen: BaseLevel = None
         self.screen: pygame.Surface = screen
 
     def setup(self):
@@ -88,7 +88,14 @@ class Game:
 ## LEVEL SCREEN
 
 
-class Level:
+collision_types = {
+    "object": 0,
+    "astronaut": 1,
+    "collectible": 2
+}
+
+
+class BaseLevel:
     def __init__(self, game, map_name="test_dungeon.tmx"):
         self.game = game
 
@@ -98,33 +105,25 @@ class Level:
         self.world: pyscroll.BufferedRenderer = None
         self.load_map(map_name)
 
+        self.astronaut = pymunk.Body()
 
-        self.body = pymunk.Body()
-        self.body.position = (80,550)
         # Astronaut collision model
-        poly = pymunk.Poly(self.body, [
+        poly = pymunk.Poly(self.astronaut, [
             (38 - 64, 120 - 64),
-            (24 - 64, 66  - 64),
-            (30 - 64, 35  - 64),
-            (45 - 64, 9   - 64),
-            (72 - 64, 7   - 64),
-            (100- 64, 58  - 64),
+            (24 - 64, 66 - 64),
+            (30 - 64, 35 - 64),
+            (45 - 64, 9 - 64),
+            (72 - 64, 7 - 64),
+            (100 - 64, 58 - 64),
             (73 - 64, 120 - 64),
         ])
         poly.density = 0.005
-        self.physspace.add(self.body, poly)
-        sprite = EntityRenderer(pygame.image.load("assets/textures/astronaut.png"), physbody=self.body)
+        poly.collision_type = collision_types["astronaut"]
+        self.physspace.add(self.astronaut, poly)
+        sprite = EntityRenderer(pygame.image.load("assets/textures/astronaut.png"), physbody=self.astronaut)
         sprite.add(self.group)
 
-        # Test Asteroid
-        asteroid = pymunk.Body()
-        asteroid.position = (320,450)
-        c = pymunk.Circle(asteroid, 27)
-        c.density = 0.1
-        c.friction = 0.4
-        self.physspace.add(c, asteroid)
-        asteroid.angular_velocity = 0.1
-        EntityRenderer(pygame.image.load("assets/textures/meteor.png"), physbody=asteroid).add(self.group)
+        self.astronaut_state = {}
 
         # Add physics from map tiles
         layer = 1
@@ -146,6 +145,8 @@ class Level:
                     blocks.append(block)
         self.physspace.add(*blocks)
 
+        self.win_trigger = pymunk.BB(10,10,200,200)
+
     def load_map(self, map_id):
         self.map = load_pygame("assets/maps/" + map_id)
         self.map_data = pyscroll.TiledMapData(self.map)
@@ -159,7 +160,11 @@ class Level:
         self.physspace.step(dt)
         self.group.update(dt)
         #self.world.scroll((0, 1))
-        self.world.center(self.body.position)
+        self.world.center(self.astronaut.position)
+
+        if self.check_win_condition():
+            print("A winner is you!")
+
 
     def render(self, surface):
         self.group.draw(surface)
@@ -172,15 +177,18 @@ class Level:
 
     def on_key_press(self, event):
         if event.key == pygame.K_DOWN:
-            self.body.apply_impulse_at_local_point((-2000,0), (0,0))
+            self.astronaut.apply_impulse_at_local_point((-2000,0), (0,0))
         if event.key == pygame.K_UP:
-            self.body.apply_impulse_at_local_point((2000,0), (0,0))
+            self.astronaut.apply_impulse_at_local_point((2000,0), (0,0))
         if event.key == pygame.K_LEFT:
-            self.body.apply_impulse_at_local_point((200,0), (30,60))
-            self.body.apply_impulse_at_local_point((-200,0), (-30,-60))
+            self.astronaut.apply_impulse_at_local_point((200,0), (30,60))
+            self.astronaut.apply_impulse_at_local_point((-200,0), (-30,-60))
         if event.key == pygame.K_RIGHT:
-            self.body.apply_impulse_at_local_point((-200,0), (30,60))
-            self.body.apply_impulse_at_local_point((200,0), (-30,-60))
+            self.astronaut.apply_impulse_at_local_point((-200,0), (30,60))
+            self.astronaut.apply_impulse_at_local_point((200,0), (-30,-60))
+
+    def check_win_condition(self):
+        return self.win_trigger.contains_vect(self.astronaut.position)
 
     def on_key_release(self, event):
         pass
@@ -206,6 +214,40 @@ class Level:
     def on_ui_input_event(self, event, source):
         pass
 
+
+class TestLevel(BaseLevel):
+    def __init__(self, game, map_name="test_dungeon.tmx"):
+
+        super().__init__(game)
+
+        self.astronaut.position = (80, 550)
+        self.astronaut_state["has_mcguffin"] = False
+
+        # Test Asteroid
+        asteroid = pymunk.Body()
+        asteroid.position = (320,450)
+        c = pymunk.Circle(asteroid, 27)
+        c.density = 0.1
+        c.friction = 0.4
+        c.collision_type = collision_types["collectible"]
+        self.physspace.add(c, asteroid)
+        asteroid.angular_velocity = 0.1
+        EntityRenderer(pygame.image.load("assets/textures/meteor.png"), physbody=asteroid).add(self.group)
+
+
+        def collect(arbiter, space, data):
+            collectible = arbiter.shapes[1]
+            space.remove(collectible, collectible.body)
+            associated_sprites = filter(lambda s: collectible in s.physbody.shapes, self.group.sprites())
+            self.group.remove(*associated_sprites)
+            self.astronaut_state["has_mcguffin"] = True
+            return False
+
+        handler = self.physspace.add_collision_handler(collision_types["astronaut"], collision_types["collectible"])
+        handler.pre_solve = collect
+
+    def check_win_condition(self):
+        return super().check_win_condition() and self.astronaut_state["has_mcguffin"]
 
 class Animation2D:
     def __init__(self,
@@ -344,7 +386,6 @@ class EntityRenderer(Sprite):
             self.rect.y = self._sprite_y
 
         self.image = pygame.transform.rotate(self.src_image, -math.degrees(self.physbody.angle))
-        print(self.physbody.angle)
         self.rect: pygame.Rect = self.image.get_rect()
         self.rect.center = int(self._sprite_x), int(self._sprite_y)
 
@@ -421,7 +462,7 @@ def main():
     game.setup()
     print("Finished loading")
 
-    game.current_screen = Level(game)
+    game.current_screen = TestLevel(game)
     game.current_screen.on_screen_enter()
 
     print("Starting Game Loop")
