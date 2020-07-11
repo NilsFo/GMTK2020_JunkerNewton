@@ -5,7 +5,7 @@ A physical adventure through space
 ## Dependencies
 
 - Python 3.6
-- pygame
+- pygame 2.0.0.dev10
 - pytmx
 - pyscroll
 - pymunk
