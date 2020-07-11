@@ -617,7 +617,7 @@ class Level1(BaseLevel):
 
         self.satellite, c = create_satellite_body(self.worldgroup, position=(27 * 32, 17 * 32))
         self.physspace.add(self.satellite, c)
-        self.physspace.add(create_asteroid_body(self.worldgroup, position=(26*32,7*32), velocity=(-1.,0.1)))
+        self.physspace.add(create_asteroid_body(self.worldgroup, position=(21*32,11*32), velocity=(-1.,0.1)))
 
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(16*32,16*32), velocity=(.3,.1), rotation=-0.7, angular_velocity=0.7))
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(16.8*32,16.2*32), velocity=(.1,-.1), rotation=1.5, angular_velocity=-0.2))
@@ -653,7 +653,6 @@ class Level1(BaseLevel):
     def get_signal_position(self):
         return self.satellite.position if not self.astronaut_state["has_sat"] else None
 
-
 class Level2(BaseLevel):
     def __init__(self, game):
         super().__init__(game, map_name="level2.tmx")
@@ -666,7 +665,8 @@ class Level2(BaseLevel):
 
         self.satellite, c = create_satellite_body(self.worldgroup, position=(25.8*32,24*32))
         self.physspace.add(self.satellite, c)
-        self.physspace.add(create_asteroid_body(self.worldgroup, position=(26*32,7*32), velocity=(-1.,0.1)))
+        self.physspace.add(create_asteroid_body(self.worldgroup, position=(26*32,5*32), velocity=(-1.,25)))
+        self.physspace.add(create_asteroid_body(self.worldgroup, position=(28*32, 3*32), velocity=(-1., 10)))
 
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(22*32,16*32), velocity=(.3,.1), rotation=-0.7, angular_velocity=0.7))
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(23.8*32,16.2*32), velocity=(.1,-.1), rotation=1.5, angular_velocity=-0.2))
@@ -1224,7 +1224,7 @@ def main():
     game.setup()
     print("Finished loading")
 
-    game.current_screen = Level1(game)
+    game.current_screen = Level2(game)
     game.current_screen.on_screen_enter()
 
     print("Starting Game Loop")
