@@ -3,9 +3,6 @@
 
 out/*
 
-# To avoid legal stuff with fonts, let's just ignore them
-*.ttf
-
 # DEFAULT GITIGNORES
 
 # Byte-compiled / optimized / DLL files

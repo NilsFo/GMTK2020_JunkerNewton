@@ -1,4 +1,5 @@
 import os
+import random
 import typing
 from datetime import datetime
 from math import floor
@@ -19,21 +20,42 @@ MAX_FPS = 60
 screen_width = 1500
 screen_height = floor(screen_width / (16 / 9))
 
-black = 0, 0, 0
+black = (0, 0, 0)
+white = (0, 0, 0)
+
+countdown_intervals = [8,10,12,14]
 
 display = pygame.display
 main_screen: pygame.Surface = display.set_mode((screen_width, screen_height), pygame.RESIZABLE)
 pygame.display.set_caption("Junker Newton")
 
-gmtk_font = "assets/fonts/FiraSans-Regular.ttf"
+gmtk_font = "assets/fonts/FiraSans-Light.ttf"
 
 ui_font = pygame.font.Font(gmtk_font, 30)
+ui_font_48 = pygame.font.Font(gmtk_font, 48)
+ui_font_64 = pygame.font.Font(gmtk_font, 64)
+ui_font_72 = pygame.font.Font(gmtk_font, 72)
+ui_font_128 = pygame.font.Font(gmtk_font, 128)
+
+## ASSETS
+black_hole_bg = pygame.image.load("assets/textures/bh_visualization.jpg")
+img_astronaut = pygame.image.load("assets/textures/astronaut/astronaut.png")
+img_astronaut_sat = pygame.image.load("assets/textures/astronaut/astronaut-sat.png")
+img_astronaut_tb = pygame.image.load("assets/textures/astronaut/astronaut-tb.png")
+img_astronaut_tb_sat = pygame.image.load("assets/textures/astronaut/astronaut-tb-sat.png")
+img_astronaut_tf = pygame.image.load("assets/textures/astronaut/astronaut-tf.png")
+img_astronaut_tf_sat = pygame.image.load("assets/textures/astronaut/astronaut-tf-sat.png")
+img_astronaut_tl = pygame.image.load("assets/textures/astronaut/astronaut-tl.png")
+img_astronaut_tl_sat = pygame.image.load("assets/textures/astronaut/astronaut-tl-sat.png")
+img_astronaut_tr = pygame.image.load("assets/textures/astronaut/astronaut-tr.png")
+img_astronaut_tr_sat = pygame.image.load("assets/textures/astronaut/astronaut-tr-sat.png")
 
 class Game:
     def __init__(self, screen):
-        self.debug_font = pygame.font.Font(gmtk_font, 12)
+        self.debug_font = pygame.font.Font(gmtk_font, 18)
 
         self.current_screen: BaseLevel = None
+        self.next_screen = None
         self.screen: pygame.Surface = screen
 
     def setup(self):
@@ -47,6 +69,9 @@ class Game:
         # Lets run this thing
         running = True
         while running:
+            if self.next_screen:
+                self.current_screen = self.next_screen
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     # sys.exit()
@@ -97,6 +122,10 @@ collision_types = {
     "collectible": 2
 }
 
+def create_button_bag():
+    bag = [0,0,1,1,2,2,3,3]
+    random.shuffle(bag)
+    return iter(bag)
 
 class BaseLevel:
     def __init__(self, game, map_name="test_dungeon.tmx"):
@@ -105,13 +134,26 @@ class BaseLevel:
         self.physspace = pymunk.Space()
         self.physspace.gravity = 0, 0
 
-        self.btn_accelerate = None
-        self.btn_decelerate = None
-        self.btn_left = None
-        self.btn_right = None
+        self.btn_accelerate_img = None
+        self.btn_decelerate_img = None
+        self.btn_left_img = None
+        self.btn_right_img = None
+
+        self.button_bag = create_button_bag()
+
+        button_bg_base = pygame.image.load("assets/textures/ButtonBG.png")
+        self.button_bg = pygame.transform.scale(button_bg_base, np.array(button_bg_base.get_size()) * 3)
+
+        conveyor_bg_base = pygame.image.load("assets/textures/ConveyorBG.png")
+        self.conveyor_bg = pygame.transform.scale(conveyor_bg_base, np.array(conveyor_bg_base.get_size()) * 3)
 
         self.world: pyscroll.BufferedRenderer = None
         self.load_map(map_name)
+
+        self.level_time = 0
+
+        self.sprite_timer = 0
+        self.last_input = 0
 
         self.astronaut = pymunk.Body()
 
@@ -128,32 +170,52 @@ class BaseLevel:
         poly.density = 0.005
         poly.collision_type = collision_types["astronaut"]
         self.physspace.add(self.astronaut, poly)
-        sprite = EntityRenderer(pygame.image.load("assets/textures/astronaut.png"), physbody=self.astronaut)
-        sprite.add(self.group)
+        self.astronaut_renderer = EntityRenderer(img_astronaut, physbody=self.astronaut)
+        self.astronaut_renderer.add(self.worldgroup)
+        self.astronaut_state = {"has_sat": False}
 
-        self.astronaut_state = {}
+        self.astronaut_sprite_normal = img_astronaut
+        self.astronaut_sprite_tf = img_astronaut_tf
+        self.astronaut_sprite_tr = img_astronaut_tr
+        self.astronaut_sprite_tb = img_astronaut_tb
+        self.astronaut_sprite_tl = img_astronaut_tl
 
         # Add physics from map tiles
-        layer = 1
+        layer = "Collision"
         tile_size_x, tile_size_y = self.map_data.tile_size
         blocks = []
-        for x, y, _ in self.map.layers[layer].tiles():
-            props: typing.Dict = self.map.get_tile_properties(x, y, layer)
-            if "blocked" in props.keys():
-                if props["blocked"]:
-                    block_body = pymunk.Body(body_type=pymunk.Body.STATIC)
-                    bb = pymunk.BB(x * tile_size_x,  # l
-                                   (y + 1) * tile_size_y,  # b
-                                   (x + 1) * tile_size_x,  # r
-                                   y * tile_size_y)  # t
-                    block = pymunk.Poly.create_box(block_body, (tile_size_x, tile_size_y))
+        for x, y, _ in self.map.layernames[layer].tiles():
+            #props: typing.Dict = self.map.get_tile_properties(x, y, layer)
+            #if "blocked" in props.keys():
+            #    if props["blocked"]:
+            block_body = pymunk.Body(body_type=pymunk.Body.STATIC)
+            bb = pymunk.BB(x * tile_size_x,  # l
+                           (y + 1) * tile_size_y,  # b
+                           (x + 1) * tile_size_x,  # r
+                           y * tile_size_y)  # t
+            block = pymunk.Poly.create_box(block_body, (tile_size_x, tile_size_y))
 
-                    blocks.append(block_body)
-                    block_body.position = bb.center()
-                    blocks.append(block)
+            blocks.append(block_body)
+            block_body.position = bb.center()
+            blocks.append(block)
         self.physspace.add(*blocks)
 
         self.win_trigger = pymunk.BB(10,10,200,200)
+        self.level_won = False
+
+        self.active_button_queue = []
+        self.waiting_button_queue = []
+        self.ui_group = pygame.sprite.Group()
+        self.ordered_button_group = pygame.sprite.OrderedUpdates()
+        for i in range(4):
+            bt = ControlButton(self,next(self.button_bag),self.get_button_x(i))
+            bt.countdown_dt = countdown_intervals[i]*2
+            self.active_button_queue.append(bt)
+            self.ordered_button_group.add(bt)
+
+        self.spawn_next_button()
+        self.spawn_next_button()
+        self.spawn_next_button()
 
     def load_map(self, map_id):
         self.map = load_pygame("assets/maps/" + map_id)
@@ -164,46 +226,197 @@ class BaseLevel:
 
         # Loading buttons
         btn = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_down.png")
-        self.btn_accelerate = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
+        self.btn_accelerate_img = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
         btn = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_up.png")
-        self.btn_decelerate = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
+        self.btn_decelerate_img = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
         btn = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_left.png")
-        self.btn_left = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
+        self.btn_left_img = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
         btn = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_right.png")
-        self.btn_right = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
+        self.btn_right_img = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
 
-        self.group = pyscroll.PyscrollGroup(map_layer=self.world)
+        self.worldgroup = pyscroll.PyscrollGroup(map_layer=self.world)
 
     def update(self, dt):
         self.physspace.step(dt)
-        self.group.update(dt)
+        self.worldgroup.update(dt)
+        self.ui_group.update(dt)
+        self.ordered_button_group.update(dt)
+
+        self.level_time += dt
+
         # self.world.scroll((0, 1))
         self.world.center(self.astronaut.position)
 
-        if self.check_win_condition():
-            print("A winner is you!")
+        # Set correct sprite
+        self.sprite_timer += dt
 
+        self.astronaut_renderer.src_image = self.get_current_astronaut_image()
+
+        for i in range(len(self.active_button_queue)):
+            bt = self.active_button_queue[i]
+            if bt.expired:
+                display_debug_message('Button expired!')
+                self.on_control_button_pressed(i)
+
+        if self.check_win_condition() and not self.level_won:
+            self.level_won = True
+            self.level_win()
+
+        if self.check_out_of_bounds():
+            self.game.next_screen = GameOverScreen(self.game, self.astronaut_state["has_sat"], self.__class__)
+
+    def level_win(self):
+        display_debug_message("A winner is you!")
+        t = TextSprite("MISSION ACCOMPLISHED", ui_font_128, self.ui_group)
+        t.set_sprite_position(self.get_screen_size()[0]//2, self.get_screen_size()[1]//2, center=True)
+
+    def check_out_of_bounds(self):
+        grace = 100
+        return (self.astronaut.position.x > self.map.width*self.map.tilewidth + grace
+                or self.astronaut.position.x < 0 - grace
+                or self.astronaut.position.y > self.map.height*self.map.tileheight + grace
+                or self.astronaut.position.y < 0 - grace)
 
     def render(self, surface):
-        self.group.draw(surface)
+        self.worldgroup.draw(surface)
 
     def on_resize(self):
         size = display.get_surface().get_size()
         view_center = self.world.view_rect.center
         self.world.set_size(size)
         self.world.center(view_center)
+        self.align_ui_buttons()
 
     def on_key_press(self, event):
         if event.key == pygame.K_DOWN:
-            self.astronaut.apply_impulse_at_local_point((-2000,0), (0,0))
+            self.astronaut_backward()
         if event.key == pygame.K_UP:
-            self.astronaut.apply_impulse_at_local_point((2000,0), (0,0))
+            self.astronaut_forward()
         if event.key == pygame.K_LEFT:
-            self.astronaut.apply_impulse_at_local_point((200,0), (30,60))
-            self.astronaut.apply_impulse_at_local_point((-200,0), (-30,-60))
+            self.astronaut_turn_backward()
         if event.key == pygame.K_RIGHT:
-            self.astronaut.apply_impulse_at_local_point((-200,0), (30,60))
-            self.astronaut.apply_impulse_at_local_point((200,0), (-30,-60))
+            self.astronaut_turn_forward()
+
+        #Num keys 1-4: 49-51
+        print('Key event: '+str(event.key))
+        if event.key == 49:
+            self.on_control_button_pressed(0)
+        if event.key == 50:
+            self.on_control_button_pressed(1)
+        if event.key == 51:
+            self.on_control_button_pressed(2)
+        if event.key == 52:
+            self.on_control_button_pressed(3)
+
+    def on_control_button_pressed(self,index):
+        bt = self.active_button_queue[index]
+        if bt is None or not bt.active:
+            display_debug_message('This action is not ready yet')
+            #TODO: Display message
+            return
+
+        mag = bt.magnitude
+        if bt.type==3:
+            self.astronaut_backward(mag)
+        if bt.type==0:
+            self.astronaut_forward(mag)
+        if bt.type==1:
+            self.astronaut_turn_backward(mag)
+        if bt.type==2:
+            self.astronaut_turn_forward(mag)
+
+        bt.animate(Animation2D((0,0),(200,200),2))
+
+        bt.on_execute()
+        #bt.stop_animations()
+        #self.active_button_queue[index] = None
+        self.ordered_button_group.remove(bt)
+
+        next_bt = self.waiting_button_queue.pop(0)
+        distance_x= self.get_button_x(index) - next_bt.get_sprite_position_x()
+        next_bt.stop_animations()
+        next_bt.animate(Animation2D((0,0),(distance_x,0),.5))
+        next_bt.countdown_dt = countdown_intervals[index]
+        self.active_button_queue[index] = next_bt
+
+        self.spawn_next_button()
+        for i in range(len(self.waiting_button_queue)):
+            bt = self.waiting_button_queue[i]
+            current_x = bt.get_sprite_position_x()
+            target_x = self.get_button_x(i+4)
+            distance_x= target_x - current_x
+            bt.stop_animations()
+            bt.animate(Animation2D((0,0),(distance_x,0),.5))
+
+
+    def get_current_astronaut_image(self):
+        if self.sprite_timer > 0.5:
+            return self.astronaut_sprite_normal
+        else:
+            if self.last_input == 1:
+                return self.astronaut_sprite_tf
+            elif self.last_input == 2:
+                return self.astronaut_sprite_tb
+            elif self.last_input == 3:
+                return self.astronaut_sprite_tr
+            elif self.last_input == 4:
+                return self.astronaut_sprite_tl
+            else:
+                return self.astronaut_sprite_normal
+
+    def astronaut_forward(self, magnitude=1):
+        self.astronaut.apply_impulse_at_local_point((2000*magnitude,0), (0,0))
+        self.last_input = 1
+        self.sprite_timer = 0
+
+    def astronaut_backward(self, magnitude=1):
+        self.astronaut.apply_impulse_at_local_point((-2000*magnitude,0), (0,0))
+        self.last_input = 2
+        self.sprite_timer = 0
+
+    def astronaut_turn_forward(self, magnitude=1):
+        self.astronaut.apply_impulse_at_local_point((-200*magnitude,0), (30,60))
+        self.astronaut.apply_impulse_at_local_point((200*magnitude,0), (-30,-60))
+        self.last_input = 3
+        self.sprite_timer = 0
+
+    def astronaut_turn_backward(self, magnitude=1):
+        self.astronaut.apply_impulse_at_local_point((200*magnitude,0), (30,60))
+        self.astronaut.apply_impulse_at_local_point((-200*magnitude,0), (-30,-60))
+        self.last_input = 4
+        self.sprite_timer = 0
+
+    def align_ui_buttons(self):
+        w,h = self.get_screen_size()
+        sw,sh = self.btn_left_img.get_size()
+
+        i = 0
+        for bt in self.active_button_queue + self.waiting_button_queue:
+            if bt is None:
+                i+=1
+                continue
+
+            #bt.set_sprite_position(y=0,stop_animations=False)
+            bx = self.get_button_x(i)
+            bt._sprite_y = h-sh-8*3
+            bt.rect.y = 0
+            bt._sprite_x = bx
+            bt._sprite_x = bx
+            i+=1
+
+    def spawn_next_button(self):
+        try:
+            bt_type = next(self.button_bag)
+        except StopIteration:
+            self.button_bag = create_button_bag()
+            bt_type = next(self.button_bag)
+        w,h = self.get_screen_size()
+        x = w+100
+        bt = ControlButton(self,bt_type,x,1,active=False)
+        self.waiting_button_queue.append(bt)
+        self.ordered_button_group.add(bt)
+
+        #display_debug_message('Actives: '+str(len(self.active_button_queue))+'. Waiting: '+str(len(self.waiting_button_queue)))
 
     def check_win_condition(self):
         return self.win_trigger.contains_vect(self.astronaut.position)
@@ -219,32 +432,237 @@ class BaseLevel:
 
     def render_ui(self, screen):
         w, h = self.get_screen_size()
-        bw, bh = self.btn_right.get_size()
-
-        # Drawing conveyor background
-        pygame.draw.rect(screen, black, (self.get_button_x(0)-30, h-bh-30, self.get_button_x(4)-self.get_button_x(0)+60-8, h))
+        bw, bh = self.btn_right_img.get_size()
 
         # Drawing debug target
-        pygame.draw.line(screen,(255,255,255),(0,h/2),(w,h/2))
-        pygame.draw.line(screen,(255,255,255),(w/2,0),(w/2,h))
+        #pygame.draw.line(screen,(255,255,255),(0,h/2),(w,h/2))
+        #pygame.draw.line(screen,(255,255,255),(w/2,0),(w/2,h))
 
-        # Drawing buttons
+        # Drawing conveyor
+        conveyor_count = int(((w/2)/16*3)) + 1
+        for i in range(conveyor_count):
+            conv_mod = i*16*3
+            screen.blit(self.conveyor_bg,(w/2+128*3+conv_mod,h-62*3-6))
+
+        #self.button_group.draw(screen)
+        self.ordered_button_group.draw(screen)
+
+        # Drawing Progressbars
         for i in range(4):
             bx = self.get_button_x(i)
-            screen.blit(self.btn_right, (bx, h - bh))
-            hotkey_text = ui_font.render(str(i+1),False,(255,255,255))
-            screen.blit(hotkey_text,(bx+bw/2,h-bh-32))
+            progressbar_x = bx + 35
+            progressbar_w = 36*3
+            pygame.draw.rect(screen,black,(progressbar_x,h-bh-60,progressbar_w,36))
+
+            bt = self.active_button_queue[i]
+            p = 0.0
+            if bt is not None:
+                p = float(bt.get_countdown_progress())
+            pygame.draw.rect(screen,(255,0,0),(progressbar_x,h-bh-60,int(progressbar_w*p),36))
+
+
+        # Drawing conveyor background
+        screen.blit(self.button_bg,(w/2-128*3, h-72*3))
+
+        # Drawing hotkeys
+        for i in range(4):
+            bx = self.get_button_x(i)
+            hotkey_text = ui_font.render(str(i+1),False,(0,0,0))
+            screen.blit(hotkey_text,(bx+5,h-bh-65))
+
+        self.ui_group.draw(screen)
 
     def get_button_x(self, index):
         w, h = self.get_screen_size()
-        bw, bh = self.btn_right.get_size()
-        button_offset = 4
+        bw, bh = self.btn_right_img.get_size()
+        button_offset = 9
         bw = bw + button_offset*2
 
-        return (w / 2) - (bw*2) + (button_offset) + (bw * index)
+        conveyor_adjustment = 0
+        if index >3:
+            conveyor_adjustment = 27*3
+
+        return (w / 2) - (bw*2) + (button_offset) + (bw * index) +conveyor_adjustment
 
     def get_button_ui_width(self):
         return self.get_button_x(1)-self.get_button_x(0)
+
+    def on_screen_enter(self):
+        pass
+
+    def on_screen_exit(self):
+        display_debug_message('Leaving game screen.')
+
+    def on_input_event(self, event):
+        pass
+
+    def on_ui_input_event(self, event, source):
+        pass
+
+
+## PHYSICS BODY CREATORS
+
+def create_asteroid_body(group, position=(0,0), velocity=(0,0), angular_velocity=0.1):
+    asteroid = pymunk.Body()
+    asteroid.position = position
+    c = pymunk.Circle(asteroid, 27)
+    c.density = 0.08
+    c.friction = 0.4
+    asteroid.angular_velocity = angular_velocity
+    asteroid.velocity = velocity
+    EntityRenderer(pygame.image.load("assets/textures/meteor.png"), physbody=asteroid).add(group)
+    return asteroid, c
+
+
+def create_clutter_body(group, clutter_type="beer", position=(0,0), velocity=(0,0), angular_velocity=0.1):
+    clutter = pymunk.Body()
+    clutter.position = position
+    if clutter_type == "beer":
+        img = pygame.image.load("assets/textures/beer.png")
+    elif clutter_type == "wrench":
+        img = pygame.image.load("assets/textures/wrench.png")
+    elif clutter_type == "platine":
+        img = pygame.image.load("assets/textures/platine.png")
+    elif clutter_type == "can":
+        img = pygame.image.load("assets/textures/can.png")
+    elif clutter_type == "cat":
+        img = pygame.image.load("assets/textures/spacecat.png")
+    c = pymunk.Poly.create_box(clutter, (img.get_width(), img.get_height()))
+    c.density = 0.001
+    c.friction = 0.4
+    clutter.angular_velocity = angular_velocity
+    clutter.velocity = velocity
+    EntityRenderer(img, physbody=clutter).add(group)
+    return clutter, c
+
+def create_satellite_body(group, position=(0,0), velocity=(0,0), angular_velocity=-0.1):
+    satellite = pymunk.Body()
+    satellite.position = position
+    c = poly = pymunk.Poly(satellite, [
+            (0  - 32, 11 - 32),
+            (11 - 32, 0  - 32),
+            (43 - 32, 21 - 32),
+            (64 - 32, 53 - 32),
+            (53 - 32, 64 - 32),
+            (21 - 32, 43 - 32),
+        ])
+    c.density = 0.05
+    c.friction = 0.4
+    c.collision_type = collision_types["collectible"]
+    satellite.angular_velocity = angular_velocity
+    satellite.velocity = velocity
+    EntityRenderer(pygame.image.load("assets/textures/satellite.png"), physbody=satellite).add(group)
+    return satellite, c
+
+class Level1(BaseLevel):
+    def __init__(self, game):
+        super().__init__(game, map_name="level1.tmx")
+
+        self.astronaut.position = (13*32, 14*32)
+        self.astronaut_state["has_sat"] = False
+
+        self.physspace.add(create_asteroid_body(self.worldgroup, position=(19*32,14*32)))
+        self.physspace.add(create_satellite_body(self.worldgroup, position=(24*32,9*32)))
+
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(16*32,16*32), velocity=(.3,.1), angular_velocity=0.7))
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(16.8*32,16.2*32), velocity=(.1,-.1), angular_velocity=-0.2))
+        self.physspace.add(create_clutter_body(self.worldgroup, "wrench", position=(15*32,14*32)))
+        self.physspace.add(create_clutter_body(self.worldgroup, "can", position=(19.5*32,17.2*32)))
+        self.physspace.add(create_clutter_body(self.worldgroup, "cat", position=(26*32,12*32), velocity=(-0.7, 0.1), angular_velocity=0.2))
+
+        self.win_trigger = pymunk.BB(10*32,12*32,16*32,18*32)
+
+        def collect(arbiter, space, data):
+            collectible = arbiter.shapes[1]
+            space.remove(collectible, collectible.body)
+            associated_sprites = filter(lambda s: collectible in s.physbody.shapes, self.worldgroup.sprites())
+            self.worldgroup.remove(*associated_sprites)
+            self.astronaut_state["has_sat"] = True
+            print(self.astronaut_state)
+
+            self.astronaut_sprite_normal = img_astronaut_sat
+            self.astronaut_sprite_tf = img_astronaut_tf_sat
+            self.astronaut_sprite_tr = img_astronaut_tr_sat
+            self.astronaut_sprite_tb = img_astronaut_tb_sat
+            self.astronaut_sprite_tl = img_astronaut_tl_sat
+            return False
+
+        handler = self.physspace.add_collision_handler(collision_types["astronaut"], collision_types["collectible"])
+        handler.pre_solve = collect
+
+    def check_win_condition(self):
+        return super().check_win_condition() and self.astronaut_state["has_sat"]
+
+class GameOverScreen:
+    def __init__(self, game, has_sat=False, reset_level:typing.ClassVar[BaseLevel]=Level1):
+        self.game = game
+        self.screen = game.screen
+        self.reset_level = reset_level
+        self.group = pygame.sprite.Group()
+        self.ui_group = pygame.sprite.Group()
+        self.bg_image = pygame.transform.smoothscale(black_hole_bg, self.get_screen_size())
+
+        self.astronaut = pygame.sprite.Sprite(self.group)
+        self.astronaut_img: pygame.Surface = img_astronaut_sat if has_sat else img_astronaut
+        self.astronaut.image = self.astronaut_img
+        self.astronaut.rect = self.astronaut_img.get_rect()
+
+        self.astronaut_scale = 2
+        self.astronaut_rot = 0
+
+        self.quote_alpha = -0.8
+        self.quote = TextSprite(["“Lost, so small amid that dark,",
+                                 "hands grown cold, body image fading down corridors",
+                                 "of television sky.” - William Gibson"])
+        self.ui_group.add(self.quote)
+
+
+    def update(self, dt):
+        self.group.update(dt)
+        self.ui_group.update(dt)
+
+        self.astronaut_scale -= 0.25*dt
+        self.astronaut_rot += 160*dt
+
+        if self.astronaut_scale <= 0.1:
+            self.group.remove(self.astronaut)
+
+        self.quote.rect.center = (self.get_screen_size()[0]//2, self.get_screen_size()[1]//2+300)
+        self.quote_alpha += 0.3*dt
+        self.quote.image.set_alpha(0)
+        self.quote.image.set_alpha(int(255*max(0., min(1., self.quote_alpha))))
+
+    def render(self, surface):
+        surface.blit(self.bg_image, (0,0))
+
+        if self.astronaut_scale > 0.1:
+            self.astronaut.image = pygame.transform.rotate(pygame.transform.scale(self.astronaut_img,
+                                                                                  (int(self.astronaut_img.get_width() * self.astronaut_scale*self.astronaut_scale),
+                                                                                   int(self.astronaut_img.get_height() * self.astronaut_scale*self.astronaut_scale))), int(self.astronaut_rot))
+            self.astronaut.rect = self.astronaut.image.get_rect()
+            self.astronaut.rect.center = (self.get_screen_size()[0]//2, self.get_screen_size()[1]//2)
+        self.group.draw(surface)
+
+    def on_resize(self):
+        size = display.get_surface().get_size()
+        self.bg_image = pygame.transform.smoothscale(black_hole_bg, self.get_screen_size())
+
+    def on_key_press(self, event):
+        pass
+
+    def on_key_release(self, event):
+        if self.quote_alpha > 0:
+            game.next_screen = self.reset_level(self.game)
+
+    def get_screen_size(self):
+        return self.game.screen.get_size()
+
+    def postprocess_render(self, screen):
+        pass
+
+    def render_ui(self, screen):
+        self.ui_group.draw(screen)
+        #screen.blit(self.quote.image, (0,0))
 
     def on_screen_enter(self):
         pass
@@ -258,41 +676,6 @@ class BaseLevel:
     def on_ui_input_event(self, event, source):
         pass
 
-
-class TestLevel(BaseLevel):
-    def __init__(self, game, map_name="test_dungeon.tmx"):
-
-        super().__init__(game)
-
-        self.astronaut.position = (80, 550)
-        self.astronaut_state["has_mcguffin"] = False
-
-        # Test Asteroid
-        asteroid = pymunk.Body()
-        asteroid.position = (320,450)
-        c = pymunk.Circle(asteroid, 27)
-        c.density = 0.1
-        c.friction = 0.4
-        c.collision_type = collision_types["collectible"]
-        self.physspace.add(c, asteroid)
-        asteroid.angular_velocity = 0.1
-        EntityRenderer(pygame.image.load("assets/textures/meteor.png"), physbody=asteroid).add(self.group)
-
-
-        def collect(arbiter, space, data):
-            collectible = arbiter.shapes[1]
-            space.remove(collectible, collectible.body)
-            associated_sprites = filter(lambda s: collectible in s.physbody.shapes, self.group.sprites())
-            self.group.remove(*associated_sprites)
-            self.astronaut_state["has_mcguffin"] = True
-            return False
-
-        handler = self.physspace.add_collision_handler(collision_types["astronaut"], collision_types["collectible"])
-        handler.pre_solve = collect
-
-    def check_win_condition(self):
-        return super().check_win_condition() and self.astronaut_state["has_mcguffin"]
-
 class Animation2D:
     def __init__(self,
                  vector_from: typing.Tuple[float, float],
@@ -304,7 +687,7 @@ class Animation2D:
         super().__init__()
         self.vector_from = vector_from
         self.vector_to = vector_to
-        self.ticks = int(duration * 1000)
+        self.ticks = duration
         if isinstance(interpolation, Interpolation):
             self.interpolation_x = interpolation
             self.interpolation_y = interpolation
@@ -400,6 +783,7 @@ class EntityRenderer(Sprite):
         self.src_image = image
         self.image = image
         self.rect: pygame.Rect = image.get_rect()
+        self._layer = 4
 
         self.animations: typing.List[Animation2D] = []
 
@@ -462,6 +846,167 @@ class EntityRenderer(Sprite):
     def animate(self, animation: Animation2D):
         self.animations.append(animation)
 
+class AnimatedEntity(Sprite):
+
+    def __init__(self, *groups):
+        super().__init__(*groups)
+
+        self._sprite_x = 0
+        self._sprite_y = 0
+        self.image = None
+        self.rect: pygame.Rect = None
+
+        self.animations: typing.List[Animation2D] = []
+
+    def update(self, dt):
+        super().update(dt)
+
+        if self.animations:
+            for anim in self.animations:
+                anim.update(dt)
+
+                # Is the animation done?
+                if anim.is_finished():
+                    # If yes, remove the animation and apply any permanent movement
+                    self.animations.remove(anim)
+
+                    # TODO maybe temporary animations that reset?
+                    self._sprite_x += anim.get_animation_x()
+                    self._sprite_y += anim.get_animation_y()
+
+            # Add all animation movement
+            self.rect.x = self._sprite_x + sum(map(lambda a: a.get_animation_x(), self.animations))
+            self.rect.y = self._sprite_y + sum(map(lambda a: a.get_animation_y(), self.animations))
+        else:
+            self.rect.x = self._sprite_x
+            self.rect.y = self._sprite_y
+
+
+    def set_sprite_position(self, x=None, y=None, center=False, stop_animations=True):
+        if x is not None:
+            if center:
+                self._sprite_x = x-self.rect.width//2
+            else:
+                self._sprite_x = x
+        if y is not None:
+            if center:
+                self._sprite_y = y-self.rect.height//2
+            else:
+                self._sprite_y = y
+
+        if stop_animations:
+            self.stop_animations()
+
+    def get_sprite_position_x(self):
+        return self._sprite_x + sum(map(lambda a: a.get_animation_x(), self.animations))
+
+    def get_sprite_position_y(self):
+        return self._sprite_y + sum(map(lambda a: a.get_animation_y(), self.animations))
+
+    def stop_animations(self, reset_position=False):
+        for anim in self.animations:
+            anim.stop()
+            if not reset_position:
+                self._sprite_x += anim.get_animation_x()
+                self._sprite_y += anim.get_animation_y()
+        self.animations.clear()
+
+    def is_animation_active(self):
+        return len(self.animations) > 0
+
+    def animate(self, animation: Animation2D):
+        self.animations.append(animation)
+
+class ControlButton(AnimatedEntity):
+
+    def __init__(self, level, type:int, x, magnitude = 1,active:bool=True,countdown_dt=3):
+        super().__init__()
+        self.level=level
+        self.type = type
+        self.magnitude =magnitude
+        self.active = active
+        self.expired = False
+
+        w,h = level.get_screen_size()
+
+        self.countdown_dt=countdown_dt
+        self.countdown_current=0
+
+        if type==0:
+            self.image=level.btn_decelerate_img
+        if type==1:
+            self.image=level.btn_left_img
+        if type==2:
+            self.image=level.btn_right_img
+        if type==3:
+            self.image=level.btn_accelerate_img
+        self.rect: pygame.Rect = self.image.get_rect()
+
+        sw,sh = self.image.get_size()
+        self._sprite_x = x
+        self._sprite_y = h-sh-8*3
+
+    def on_execute(self):
+        pass
+
+    def update(self, dt):
+        super().update(dt)
+
+        if self.active:
+            self.countdown_current += dt
+
+        if self.countdown_current >= self.countdown_dt:
+            self.expired = True
+
+    def get_countdown_progress(self):
+        return float(self.countdown_current) / float(self.countdown_dt)
+
+    def animate(self, animation: Animation2D):
+        super().animate(animation)
+
+        def finished():
+            if self in self.level.active_button_queue:
+                self.active = True
+
+        animation.add_animation_finished_callback(finished)
+
+
+class TextSprite(AnimatedEntity):
+    def __init__(self, text, font=ui_font_48, *groups):
+        super().__init__(*groups)
+
+        if isinstance(text, list):
+            linesurfs = []
+            for line in text:
+                textsurface = font.render(line, True, (230, 230, 230)).convert_alpha()
+                w = textsurface.get_width() + 2
+                h = textsurface.get_height() + 2
+                image = pygame.Surface((w,h)).convert_alpha()
+                image.fill((0, 0, 0, 0))
+                image.blit(font.render(line, True, (0, 0, 0)).convert_alpha(), (2, 2))
+                image.blit(textsurface, (0, 0))
+                linesurfs.append(image)
+            self.image = pygame.Surface((max(map(lambda i: i.get_width(), linesurfs)),
+                                        #sum(map(lambda i: i.get_height(), linesurfs)))
+                                         font.get_height()*len(text))
+                                        ).convert_alpha()
+            self.image.fill((0, 0, 0, 0))
+            for i, line in enumerate(linesurfs):
+                self.image.blit(line,
+                                (int(self.image.get_width()/2-line.get_width()/2),
+                                font.get_height()*i))
+            self.image = self.image
+            self.rect = self.image.get_rect()
+        else:
+            textsurface = font.render(text, True, (230, 230, 230)).convert_alpha()
+            w = textsurface.get_width() + 2
+            h = textsurface.get_height() + 2
+            self.image = pygame.Surface((w,h)).convert_alpha()
+            self.image.fill((0, 0, 0, 0))
+            self.image.blit(font.render(text, True, (0, 0, 0)).convert_alpha(),(2,2))
+            self.image.blit(textsurface, (0,0))
+            self.rect = self.image.get_rect()
+
 
 ### DEBUG MESSAGES
 _debug_message_list = []
@@ -506,7 +1051,7 @@ def main():
     game.setup()
     print("Finished loading")
 
-    game.current_screen = TestLevel(game)
+    game.current_screen = Level1(game)
     game.current_screen.on_screen_enter()
 
     print("Starting Game Loop")
