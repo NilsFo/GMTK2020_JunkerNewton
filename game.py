@@ -174,6 +174,9 @@ class BaseLevel:
         self.sprite_timer = 0
         self.last_input = 0
 
+        self.signal_radius = 0
+        self.signal_source = None
+
         self.astronaut = pymunk.Body()
 
         # Astronaut collision model
@@ -213,6 +216,7 @@ class BaseLevel:
                            (x + 1) * tile_size_x,  # r
                            y * tile_size_y)  # t
             block = pymunk.Poly.create_box(block_body, (tile_size_x, tile_size_y))
+            block.friction = 0.5
 
             blocks.append(block_body)
             block_body.position = bb.center()
@@ -253,6 +257,12 @@ class BaseLevel:
         self.ordered_button_group.update(dt)
 
         self.level_time += dt
+
+        self.signal_source = self.get_signal_position()
+        if self.signal_source is not None:
+            self.signal_radius += 1000*dt
+            if self.signal_radius > 5000:
+                self.signal_radius = 0
 
         # self.world.scroll((0, 1))
         self.world.center(self.astronaut.position)
@@ -295,6 +305,10 @@ class BaseLevel:
 
     def render(self, surface):
         self.worldgroup.draw(surface)
+
+        # draw signal
+        if self.signal_source is not None:
+            pygame.draw.circle(surface, (0,180,0), self.world.translate_point(self.signal_source), self.signal_radius, width=2)
 
     def on_resize(self):
         size = display.get_surface().get_size()
@@ -517,6 +531,9 @@ class BaseLevel:
     def on_ui_input_event(self, event, source):
         pass
 
+    def get_signal_position(self):
+        return None
+
 
 ## PHYSICS BODY CREATORS
 
@@ -583,9 +600,9 @@ class Level1(BaseLevel):
         self.astronaut.position = (13*32, 15.5*32)
         self.astronaut_state["has_sat"] = False
 
-
+        self.satellite, c = create_satellite_body(self.worldgroup, position=(27 * 32, 17 * 32))
+        self.physspace.add(self.satellite, c)
         self.physspace.add(create_asteroid_body(self.worldgroup, position=(26*32,7*32), velocity=(-1.,0.1)))
-        self.physspace.add(create_satellite_body(self.worldgroup, position=(27*32,17*32)))
 
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(16*32,16*32), velocity=(.3,.1), rotation=-0.7, angular_velocity=0.7))
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(16.8*32,16.2*32), velocity=(.1,-.1), rotation=1.5, angular_velocity=-0.2))
@@ -618,6 +635,9 @@ class Level1(BaseLevel):
     def check_win_condition(self):
         return super().check_win_condition() and self.astronaut_state["has_sat"]
 
+    def get_signal_position(self):
+        return self.satellite.position if not self.astronaut_state["has_sat"] else None
+
 
 class Level2(BaseLevel):
     def __init__(self, game):
@@ -629,8 +649,9 @@ class Level2(BaseLevel):
 
         self.next_level = Level3
 
+        self.satellite, c = create_satellite_body(self.worldgroup, position=(25.8*32,24*32))
+        self.physspace.add(self.satellite, c)
         self.physspace.add(create_asteroid_body(self.worldgroup, position=(26*32,7*32), velocity=(-1.,0.1)))
-        self.physspace.add(create_satellite_body(self.worldgroup, position=(25.8*32,24*32)))
 
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(22*32,16*32), velocity=(.3,.1), rotation=-0.7, angular_velocity=0.7))
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(23.8*32,16.2*32), velocity=(.1,-.1), rotation=1.5, angular_velocity=-0.2))
@@ -663,6 +684,8 @@ class Level2(BaseLevel):
     def check_win_condition(self):
         return super().check_win_condition() and self.astronaut_state["has_sat"]
 
+    def get_signal_position(self):
+        return self.satellite.position if not self.astronaut_state["has_sat"] else None
 
 class Level3(BaseLevel):
     def __init__(self, game):
@@ -673,8 +696,9 @@ class Level3(BaseLevel):
         self.astronaut.position = (13*32, 14*32)
         self.astronaut_state["has_sat"] = False
 
+        self.satellite, c = create_satellite_body(self.worldgroup, position=(24*32,9*32))
+        self.physspace.add(self.satellite, c)
         self.physspace.add(create_asteroid_body(self.worldgroup, position=(19*32,14*32)))
-        self.physspace.add(create_satellite_body(self.worldgroup, position=(24*32,9*32)))
 
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(16*32,16*32), velocity=(.3,.1), angular_velocity=0.7))
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(16.8*32,16.2*32), velocity=(.1,-.1), angular_velocity=-0.2))
@@ -705,6 +729,9 @@ class Level3(BaseLevel):
 
     def check_win_condition(self):
         return super().check_win_condition() and self.astronaut_state["has_sat"]
+
+    def get_signal_position(self):
+        return self.satellite.position if not self.astronaut_state["has_sat"] else None
 
 class GameOverScreen:
     def __init__(self, game, has_sat=False, reset_level:typing.ClassVar[BaseLevel]=Level1):
