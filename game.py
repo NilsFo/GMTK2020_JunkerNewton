@@ -8,10 +8,9 @@ import pygame
 import pymunk
 import pymunk.pygame_util
 import pyscroll
+from interpolation import *
 from pygame.sprite import Sprite
 from pytmx import load_pygame
-
-from interpolation import *
 
 pygame.init()
 
@@ -28,6 +27,7 @@ pygame.display.set_caption("Junker Newton")
 gmtk_font = "assets/fonts/FiraSans-Regular.ttf"
 
 ui_font = pygame.font.Font(gmtk_font, 30)
+
 
 class Game:
     def __init__(self, screen):
@@ -153,7 +153,7 @@ class BaseLevel:
                     blocks.append(block)
         self.physspace.add(*blocks)
 
-        self.win_trigger = pymunk.BB(10,10,200,200)
+        self.win_trigger = pymunk.BB(10, 10, 200, 200)
 
     def load_map(self, map_id):
         self.map = load_pygame("assets/maps/" + map_id)
@@ -183,7 +183,6 @@ class BaseLevel:
         if self.check_win_condition():
             print("A winner is you!")
 
-
     def render(self, surface):
         self.group.draw(surface)
 
@@ -195,15 +194,15 @@ class BaseLevel:
 
     def on_key_press(self, event):
         if event.key == pygame.K_DOWN:
-            self.astronaut.apply_impulse_at_local_point((-2000,0), (0,0))
+            self.astronaut.apply_impulse_at_local_point((-2000, 0), (0, 0))
         if event.key == pygame.K_UP:
-            self.astronaut.apply_impulse_at_local_point((2000,0), (0,0))
+            self.astronaut.apply_impulse_at_local_point((2000, 0), (0, 0))
         if event.key == pygame.K_LEFT:
-            self.astronaut.apply_impulse_at_local_point((200,0), (30,60))
-            self.astronaut.apply_impulse_at_local_point((-200,0), (-30,-60))
+            self.astronaut.apply_impulse_at_local_point((200, 0), (30, 60))
+            self.astronaut.apply_impulse_at_local_point((-200, 0), (-30, -60))
         if event.key == pygame.K_RIGHT:
-            self.astronaut.apply_impulse_at_local_point((-200,0), (30,60))
-            self.astronaut.apply_impulse_at_local_point((200,0), (-30,-60))
+            self.astronaut.apply_impulse_at_local_point((-200, 0), (30, 60))
+            self.astronaut.apply_impulse_at_local_point((200, 0), (-30, -60))
 
     def check_win_condition(self):
         return self.win_trigger.contains_vect(self.astronaut.position)
@@ -222,29 +221,30 @@ class BaseLevel:
         bw, bh = self.btn_right.get_size()
 
         # Drawing conveyor background
-        pygame.draw.rect(screen, black, (self.get_button_x(0)-30, h-bh-30, self.get_button_x(4)-self.get_button_x(0)+60-8, h))
+        pygame.draw.rect(screen, black, (
+        self.get_button_x(0) - 30, h - bh - 30, self.get_button_x(4) - self.get_button_x(0) + 60 - 8, h))
 
         # Drawing debug target
-        pygame.draw.line(screen,(255,255,255),(0,h/2),(w,h/2))
-        pygame.draw.line(screen,(255,255,255),(w/2,0),(w/2,h))
+        pygame.draw.line(screen, (255, 255, 255), (0, h / 2), (w, h / 2))
+        pygame.draw.line(screen, (255, 255, 255), (w / 2, 0), (w / 2, h))
 
         # Drawing buttons
         for i in range(4):
             bx = self.get_button_x(i)
             screen.blit(self.btn_right, (bx, h - bh))
-            hotkey_text = ui_font.render(str(i+1),False,(255,255,255))
-            screen.blit(hotkey_text,(bx+bw/2,h-bh-32))
+            hotkey_text = ui_font.render(str(i + 1), False, (255, 255, 255))
+            screen.blit(hotkey_text, (bx + bw / 2, h - bh - 32))
 
     def get_button_x(self, index):
         w, h = self.get_screen_size()
         bw, bh = self.btn_right.get_size()
         button_offset = 4
-        bw = bw + button_offset*2
+        bw = bw + button_offset * 2
 
-        return (w / 2) - (bw*2) + (button_offset) + (bw * index)
+        return (w / 2) - (bw * 2) + (button_offset) + (bw * index)
 
     def get_button_ui_width(self):
-        return self.get_button_x(1)-self.get_button_x(0)
+        return self.get_button_x(1) - self.get_button_x(0)
 
     def on_screen_enter(self):
         pass
@@ -261,7 +261,6 @@ class BaseLevel:
 
 class TestLevel(BaseLevel):
     def __init__(self, game, map_name="test_dungeon.tmx"):
-
         super().__init__(game)
 
         self.astronaut.position = (80, 550)
@@ -269,7 +268,7 @@ class TestLevel(BaseLevel):
 
         # Test Asteroid
         asteroid = pymunk.Body()
-        asteroid.position = (320,450)
+        asteroid.position = (320, 450)
         c = pymunk.Circle(asteroid, 27)
         c.density = 0.1
         c.friction = 0.4
@@ -277,7 +276,6 @@ class TestLevel(BaseLevel):
         self.physspace.add(c, asteroid)
         asteroid.angular_velocity = 0.1
         EntityRenderer(pygame.image.load("assets/textures/meteor.png"), physbody=asteroid).add(self.group)
-
 
         def collect(arbiter, space, data):
             collectible = arbiter.shapes[1]
@@ -292,6 +290,7 @@ class TestLevel(BaseLevel):
 
     def check_win_condition(self):
         return super().check_win_condition() and self.astronaut_state["has_mcguffin"]
+
 
 class Animation2D:
     def __init__(self,
