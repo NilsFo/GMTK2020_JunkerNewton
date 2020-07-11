@@ -50,6 +50,27 @@ img_astronaut_tl_sat = pygame.image.load("assets/textures/astronaut/astronaut-tl
 img_astronaut_tr = pygame.image.load("assets/textures/astronaut/astronaut-tr.png")
 img_astronaut_tr_sat = pygame.image.load("assets/textures/astronaut/astronaut-tr-sat.png")
 
+# LOADING ACTIVE BUTTONS
+btn_accelerate_img = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_down.png")
+btn_accelerate_img = pygame.transform.scale(btn_accelerate_img, np.array(btn_accelerate_img.get_size()) * 3)
+btn_decelerate_img = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_up.png")
+btn_decelerate_img = pygame.transform.scale(btn_decelerate_img, np.array(btn_decelerate_img.get_size()) * 3)
+btn_left_img = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_left.png")
+btn_left_img = pygame.transform.scale(btn_left_img, np.array(btn_left_img.get_size()) * 3)
+btn_right_img = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_right.png")
+btn_right_img = pygame.transform.scale(btn_right_img, np.array(btn_right_img.get_size()) * 3)
+
+# LOADING DISABLED BUTTONS
+btn_accelerate_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_down_g.png")
+btn_accelerate_img_disabled = pygame.transform.scale(btn_accelerate_img_disabled, np.array(btn_accelerate_img_disabled.get_size()) * 3)
+btn_decelerate_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_up_g.png")
+btn_decelerate_img_disabled = pygame.transform.scale(btn_decelerate_img_disabled, np.array(btn_decelerate_img_disabled.get_size()) * 3)
+btn_left_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_left_g.png")
+btn_left_img_disabled = pygame.transform.scale(btn_left_img_disabled, np.array(btn_left_img_disabled.get_size()) * 3)
+btn_right_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_right_g.png")
+btn_right_img_disabled = pygame.transform.scale(btn_right_img_disabled, np.array(btn_right_img_disabled.get_size()) * 3)
+
+
 class Game:
     def __init__(self, screen):
         self.debug_font = pygame.font.Font(gmtk_font, 18)
@@ -134,11 +155,6 @@ class BaseLevel:
         self.physspace = pymunk.Space()
         self.physspace.gravity = 0, 0
 
-        self.btn_accelerate_img = None
-        self.btn_decelerate_img = None
-        self.btn_left_img = None
-        self.btn_right_img = None
-
         self.button_bag = create_button_bag()
 
         button_bg_base = pygame.image.load("assets/textures/ButtonBG.png")
@@ -216,6 +232,7 @@ class BaseLevel:
         self.spawn_next_button()
         self.spawn_next_button()
         self.spawn_next_button()
+        self.align_ui_buttons()
 
     def load_map(self, map_id):
         self.map = load_pygame("assets/maps/" + map_id)
@@ -223,16 +240,6 @@ class BaseLevel:
         self.world = pyscroll.BufferedRenderer(self.map_data, self.get_screen_size())
         self.world.zoom = 2
         self.world.scroll((0, 300))
-
-        # Loading buttons
-        btn = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_down.png")
-        self.btn_accelerate_img = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
-        btn = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_up.png")
-        self.btn_decelerate_img = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
-        btn = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_left.png")
-        self.btn_left_img = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
-        btn = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_right.png")
-        self.btn_right_img = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
 
         self.worldgroup = pyscroll.PyscrollGroup(map_layer=self.world)
 
@@ -311,7 +318,7 @@ class BaseLevel:
     def on_control_button_pressed(self,index):
         bt = self.active_button_queue[index]
         if bt is None or not bt.active:
-            display_debug_message('This action is not ready yet')
+            #display_debug_message('This action is not ready yet')
             #TODO: Display message
             return
 
@@ -339,7 +346,9 @@ class BaseLevel:
         next_bt.countdown_dt = countdown_intervals[index]
         self.active_button_queue[index] = next_bt
 
-        self.spawn_next_button()
+        new_bt = self.spawn_next_button()
+        next_bt.update(0)
+        #self.align_ui_buttons()
         for i in range(len(self.waiting_button_queue)):
             bt = self.waiting_button_queue[i]
             current_x = bt.get_sprite_position_x()
@@ -388,7 +397,7 @@ class BaseLevel:
 
     def align_ui_buttons(self):
         w,h = self.get_screen_size()
-        sw,sh = self.btn_left_img.get_size()
+        sw,sh = btn_left_img.get_size()
 
         i = 0
         for bt in self.active_button_queue + self.waiting_button_queue:
@@ -416,7 +425,7 @@ class BaseLevel:
         self.waiting_button_queue.append(bt)
         self.ordered_button_group.add(bt)
 
-        #display_debug_message('Actives: '+str(len(self.active_button_queue))+'. Waiting: '+str(len(self.waiting_button_queue)))
+        return bt
 
     def check_win_condition(self):
         return self.win_trigger.contains_vect(self.astronaut.position)
@@ -432,7 +441,7 @@ class BaseLevel:
 
     def render_ui(self, screen):
         w, h = self.get_screen_size()
-        bw, bh = self.btn_right_img.get_size()
+        bw, bh = btn_right_img.get_size()
 
         # Drawing debug target
         #pygame.draw.line(screen,(255,255,255),(0,h/2),(w,h/2))
@@ -474,7 +483,7 @@ class BaseLevel:
 
     def get_button_x(self, index):
         w, h = self.get_screen_size()
-        bw, bh = self.btn_right_img.get_size()
+        bw, bh = btn_right_img.get_size()
         button_offset = 9
         bw = bw + button_offset*2
 
@@ -932,19 +941,34 @@ class ControlButton(AnimatedEntity):
         self.countdown_dt=countdown_dt
         self.countdown_current=0
 
-        if type==0:
-            self.image=level.btn_decelerate_img
-        if type==1:
-            self.image=level.btn_left_img
-        if type==2:
-            self.image=level.btn_right_img
-        if type==3:
-            self.image=level.btn_accelerate_img
+        self.update_sprite()
         self.rect: pygame.Rect = self.image.get_rect()
 
         sw,sh = self.image.get_size()
         self._sprite_x = x
         self._sprite_y = h-sh-8*3
+        self.rect.x = self._sprite_x
+        self.rect.y = self._sprite_y
+
+    def update_sprite(self):
+        if self.active:
+            if self.type==0:
+                self.image=btn_decelerate_img
+            if self.type==1:
+                self.image=btn_left_img
+            if self.type==2:
+                self.image=btn_right_img
+            if self.type==3:
+                self.image=btn_accelerate_img
+        else:
+            if self.type==0:
+                self.image=btn_decelerate_img_disabled
+            if self.type==1:
+                self.image=btn_left_img_disabled
+            if self.type==2:
+                self.image=btn_right_img_disabled
+            if self.type==3:
+                self.image=btn_accelerate_img_disabled
 
     def on_execute(self):
         pass
@@ -967,6 +991,7 @@ class ControlButton(AnimatedEntity):
         def finished():
             if self in self.level.active_button_queue:
                 self.active = True
+                self.update_sprite()
 
         animation.add_animation_finished_callback(finished)
 
