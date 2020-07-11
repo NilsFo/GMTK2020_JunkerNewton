@@ -26,15 +26,20 @@ display = pygame.display
 main_screen: pygame.Surface = display.set_mode((screen_width, screen_height), pygame.RESIZABLE)
 pygame.display.set_caption("Junker Newton")
 
-gmtk_font = "assets/fonts/FiraSans-Regular.ttf"
+gmtk_font = "assets/fonts/FiraSans-Light.ttf"
 
 ui_font = pygame.font.Font(gmtk_font, 30)
+ui_font_48 = pygame.font.Font(gmtk_font, 48)
+ui_font_64 = pygame.font.Font(gmtk_font, 64)
+ui_font_72 = pygame.font.Font(gmtk_font, 72)
+ui_font_128 = pygame.font.Font(gmtk_font, 128)
 
 class Game:
     def __init__(self, screen):
         self.debug_font = pygame.font.Font(gmtk_font, 12)
 
         self.current_screen: BaseLevel = None
+        self.next_screen = None
         self.screen: pygame.Surface = screen
 
     def setup(self):
@@ -48,6 +53,9 @@ class Game:
         # Lets run this thing
         running = True
         while running:
+            if self.next_screen:
+                self.current_screen = self.next_screen
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     # sys.exit()
@@ -114,6 +122,8 @@ class BaseLevel:
         self.world: pyscroll.BufferedRenderer = None
         self.load_map(map_name)
 
+        self.level_time = 0
+
         self.astronaut = pymunk.Body()
 
         # Astronaut collision model
@@ -155,13 +165,15 @@ class BaseLevel:
         self.physspace.add(*blocks)
 
         self.win_trigger = pymunk.BB(10,10,200,200)
+        self.level_won = False
 
         self.button_queue = []
-        self.button_group = pygame.sprite.Group()
+        self.ui_group = pygame.sprite.Group()
         for i in range(4):
             bt = ControlButton(self,random.randint(0,3),self.get_button_x(i))
             self.button_queue.append(bt)
-            self.button_group.add(bt)
+            self.ui_group.add(bt)
+
 
     def load_map(self, map_id):
         self.map = load_pygame("assets/maps/" + map_id)
@@ -185,14 +197,31 @@ class BaseLevel:
     def update(self, dt):
         self.physspace.step(dt)
         self.worldgroup.update(dt)
-        self.button_group.update(dt)
+        self.ui_group.update(dt)
+
+        self.level_time += dt
 
         # self.world.scroll((0, 1))
         self.world.center(self.astronaut.position)
 
-        if self.check_win_condition():
-            print("A winner is you!")
+        if self.check_win_condition() and not self.level_won:
+            self.level_won = True
+            self.end_level()
 
+        if self.check_out_of_bounds():
+            self.game.next_screen = GameOverScreen(self.game)
+
+    def end_level(self):
+        display_debug_message("A winner is you!")
+        t = TextSprite("MISSION ACCOMPLISHED", ui_font_128, self.ui_group)
+        t.set_sprite_position(screen_width//2, screen_height//2, center=True)
+
+    def check_out_of_bounds(self):
+        grace = 100
+        return (self.astronaut.position.x > self.map.width*self.map.tilewidth + grace
+                or self.astronaut.position.x < 0 - grace
+                or self.astronaut.position.y > self.map.height*self.map.tileheight + grace
+                or self.astronaut.position.y < 0 - grace)
 
     def render(self, surface):
         self.worldgroup.draw(surface)
@@ -244,7 +273,7 @@ class BaseLevel:
 
         bt.on_execute()
         self.button_queue[index] = None
-        self.button_group.remove(bt)
+        self.ui_group.remove(bt)
 
     def check_win_condition(self):
         return self.win_trigger.contains_vect(self.astronaut.position)
@@ -276,7 +305,7 @@ class BaseLevel:
             hotkey_text = ui_font.render(str(i+1),False,(255,255,255))
             screen.blit(hotkey_text,(bx,h-bh-32))
 
-        self.button_group.draw(screen)
+        self.ui_group.draw(screen)
 
     def get_button_x(self, index):
         w, h = self.get_screen_size()
@@ -336,6 +365,88 @@ class Level1(BaseLevel):
 
     def check_win_condition(self):
         return super().check_win_condition() and self.astronaut_state["has_mcguffin"]
+
+class GameOverScreen():
+    def __init__(self, game):
+        self.game = game
+        self.screen = game.screen
+        self.group = pygame.sprite.Group()
+        self.ui_group = pygame.sprite.Group()
+        self.bg_image = pygame.transform.smoothscale(pygame.image.load("assets/textures/bh_visualization.jpg"), self.get_screen_size())
+
+        self.astronaut = pygame.sprite.Sprite(self.group)
+        self.astronaut_img: pygame.Surface = pygame.image.load("assets/textures/astronaut.png")
+        self.astronaut.image = self.astronaut_img
+        self.astronaut.rect = self.astronaut_img.get_rect()
+
+        self.astronaut_scale = 2
+        self.astronaut_rot = 0
+
+        self.quote_alpha = -0.8
+        self.quote = TextSprite(["“Lost, so small amid that dark,",
+                                 "hands grown cold, body image fading down corridors",
+                                 "of television sky.” - William Gibson"])
+        self.ui_group.add(self.quote)
+
+
+    def update(self, dt):
+        self.group.update(dt)
+        self.ui_group.update(dt)
+
+
+        self.astronaut_scale -= 0.25*dt
+        self.astronaut_rot += 160*dt
+
+        if self.astronaut_scale <= 0.1:
+            self.group.remove(self.astronaut)
+
+        self.quote.rect.center = (self.get_screen_size()[0]//2, self.get_screen_size()[1]//2)
+        self.quote_alpha += 0.3*dt
+        self.quote.image.set_alpha(0)
+        self.quote.image.set_alpha(int(255*max(0., min(1., self.quote_alpha))))
+
+    def render(self, surface):
+        surface.blit(self.bg_image, (0,0))
+
+        if self.astronaut_scale > 0.1:
+            self.astronaut.image = pygame.transform.rotate(pygame.transform.scale(self.astronaut_img,
+                                                                                  (int(self.astronaut_img.get_width() * self.astronaut_scale*self.astronaut_scale),
+                                                                                   int(self.astronaut_img.get_height() * self.astronaut_scale*self.astronaut_scale))), int(self.astronaut_rot))
+            self.astronaut.rect = self.astronaut.image.get_rect()
+            self.astronaut.rect.center = (self.get_screen_size()[0]//2, self.get_screen_size()[1]//2)
+        self.group.draw(surface)
+
+    def on_resize(self):
+        size = display.get_surface().get_size()
+
+    def on_key_press(self, event):
+        pass
+
+
+    def on_key_release(self, event):
+        pass
+
+    def get_screen_size(self):
+        return self.game.screen.get_size()
+
+    def postprocess_render(self, screen):
+        pass
+
+    def render_ui(self, screen):
+        self.ui_group.draw(screen)
+        #screen.blit(self.quote.image, (0,0))
+
+    def on_screen_enter(self):
+        pass
+
+    def on_screen_exit(self):
+        pass
+
+    def on_input_event(self, event):
+        pass
+
+    def on_ui_input_event(self, event, source):
+        pass
 
 class Animation2D:
     def __init__(self,
@@ -543,11 +654,17 @@ class AnimatedEntity(Sprite):
             self.rect.y = self._sprite_y
 
 
-    def set_sprite_position(self, x=None, y=None, stop_animations=True):
+    def set_sprite_position(self, x=None, y=None, center=False, stop_animations=True):
         if x is not None:
-            self._sprite_x = x
+            if center:
+                self._sprite_x = x-self.rect.width//2
+            else:
+                self._sprite_x = x
         if y is not None:
-            self._sprite_y = y
+            if center:
+                self._sprite_y = y-self.rect.height//2
+            else:
+                self._sprite_y = y
 
         if stop_animations:
             self.stop_animations()
@@ -600,6 +717,42 @@ class ControlButton(AnimatedEntity):
     def update(self, dt):
         super().update(dt)
 
+
+class TextSprite(AnimatedEntity):
+    def __init__(self, text, font=ui_font_48, *groups):
+        super().__init__(*groups)
+
+        if isinstance(text, list):
+            linesurfs = []
+            for line in text:
+                textsurface = font.render(line, True, (230, 230, 230)).convert_alpha()
+                w = textsurface.get_width() + 2
+                h = textsurface.get_height() + 2
+                image = pygame.Surface((w,h)).convert_alpha()
+                image.fill((0, 0, 0, 0))
+                image.blit(font.render(line, True, (0, 0, 0)).convert_alpha(), (2, 2))
+                image.blit(textsurface, (0, 0))
+                linesurfs.append(image)
+            self.image = pygame.Surface((max(map(lambda i: i.get_width(), linesurfs)),
+                                        #sum(map(lambda i: i.get_height(), linesurfs)))
+                                         font.get_height()*len(text))
+                                        ).convert_alpha()
+            self.image.fill((0, 0, 0, 0))
+            for i, line in enumerate(linesurfs):
+                self.image.blit(line,
+                                (int(self.image.get_width()/2-line.get_width()/2),
+                                font.get_height()*i))
+            self.image = self.image
+            self.rect = self.image.get_rect()
+        else:
+            textsurface = font.render(text, True, (230, 230, 230)).convert_alpha()
+            w = textsurface.get_width() + 2
+            h = textsurface.get_height() + 2
+            self.image = pygame.Surface((w,h)).convert_alpha()
+            self.image.fill((0, 0, 0, 0))
+            self.image.blit(font.render(text, True, (0, 0, 0)).convert_alpha(),(2,2))
+            self.image.blit(textsurface, (0,0))
+            self.rect = self.image.get_rect()
 
 
 ### DEBUG MESSAGES
