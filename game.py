@@ -128,29 +128,29 @@ class BaseLevel:
         poly.density = 0.005
         poly.collision_type = collision_types["astronaut"]
         self.physspace.add(self.astronaut, poly)
-        sprite = EntityRenderer(pygame.image.load("assets/textures/astronaut.png"), physbody=self.astronaut)
-        sprite.add(self.group)
+        astronautsprite = EntityRenderer(pygame.image.load("assets/textures/astronaut.png"), physbody=self.astronaut)
+        astronautsprite.add(self.worldgroup)
 
         self.astronaut_state = {}
 
         # Add physics from map tiles
-        layer = 1
+        layer = "Collision"
         tile_size_x, tile_size_y = self.map_data.tile_size
         blocks = []
-        for x, y, _ in self.map.layers[layer].tiles():
-            props: typing.Dict = self.map.get_tile_properties(x, y, layer)
-            if "blocked" in props.keys():
-                if props["blocked"]:
-                    block_body = pymunk.Body(body_type=pymunk.Body.STATIC)
-                    bb = pymunk.BB(x * tile_size_x,  # l
-                                   (y + 1) * tile_size_y,  # b
-                                   (x + 1) * tile_size_x,  # r
-                                   y * tile_size_y)  # t
-                    block = pymunk.Poly.create_box(block_body, (tile_size_x, tile_size_y))
+        for x, y, _ in self.map.layernames[layer].tiles():
+            #props: typing.Dict = self.map.get_tile_properties(x, y, layer)
+            #if "blocked" in props.keys():
+            #    if props["blocked"]:
+            block_body = pymunk.Body(body_type=pymunk.Body.STATIC)
+            bb = pymunk.BB(x * tile_size_x,  # l
+                           (y + 1) * tile_size_y,  # b
+                           (x + 1) * tile_size_x,  # r
+                           y * tile_size_y)  # t
+            block = pymunk.Poly.create_box(block_body, (tile_size_x, tile_size_y))
 
-                    blocks.append(block_body)
-                    block_body.position = bb.center()
-                    blocks.append(block)
+            blocks.append(block_body)
+            block_body.position = bb.center()
+            blocks.append(block)
         self.physspace.add(*blocks)
 
         self.win_trigger = pymunk.BB(10,10,200,200)
@@ -172,11 +172,11 @@ class BaseLevel:
         btn = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_right.png")
         self.btn_right = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
 
-        self.group = pyscroll.PyscrollGroup(map_layer=self.world)
+        self.worldgroup = pyscroll.PyscrollGroup(map_layer=self.world)
 
     def update(self, dt):
         self.physspace.step(dt)
-        self.group.update(dt)
+        self.worldgroup.update(dt)
         # self.world.scroll((0, 1))
         self.world.center(self.astronaut.position)
 
@@ -185,7 +185,7 @@ class BaseLevel:
 
 
     def render(self, surface):
-        self.group.draw(surface)
+        self.worldgroup.draw(surface)
 
     def on_resize(self):
         size = display.get_surface().get_size()
@@ -259,32 +259,33 @@ class BaseLevel:
         pass
 
 
-class TestLevel(BaseLevel):
-    def __init__(self, game, map_name="test_dungeon.tmx"):
+class Level1(BaseLevel):
+    def __init__(self, game):
+        super().__init__(game, map_name="level1.tmx")
 
-        super().__init__(game)
-
-        self.astronaut.position = (80, 550)
+        self.astronaut.position = (13*32, 14*32)
         self.astronaut_state["has_mcguffin"] = False
 
         # Test Asteroid
         asteroid = pymunk.Body()
-        asteroid.position = (320,450)
+        asteroid.position = (24*32,9*32)
         c = pymunk.Circle(asteroid, 27)
         c.density = 0.1
         c.friction = 0.4
         c.collision_type = collision_types["collectible"]
         self.physspace.add(c, asteroid)
         asteroid.angular_velocity = 0.1
-        EntityRenderer(pygame.image.load("assets/textures/meteor.png"), physbody=asteroid).add(self.group)
+        EntityRenderer(pygame.image.load("assets/textures/meteor.png"), physbody=asteroid).add(self.worldgroup)
 
+        self.win_trigger = pymunk.BB(10*32,12*32,16*32,18*32)
 
         def collect(arbiter, space, data):
             collectible = arbiter.shapes[1]
             space.remove(collectible, collectible.body)
-            associated_sprites = filter(lambda s: collectible in s.physbody.shapes, self.group.sprites())
-            self.group.remove(*associated_sprites)
+            associated_sprites = filter(lambda s: collectible in s.physbody.shapes, self.worldgroup.sprites())
+            self.worldgroup.remove(*associated_sprites)
             self.astronaut_state["has_mcguffin"] = True
+            print(self.astronaut_state)
             return False
 
         handler = self.physspace.add_collision_handler(collision_types["astronaut"], collision_types["collectible"])
@@ -400,6 +401,7 @@ class EntityRenderer(Sprite):
         self.src_image = image
         self.image = image
         self.rect: pygame.Rect = image.get_rect()
+        self._layer = 4
 
         self.animations: typing.List[Animation2D] = []
 
@@ -506,7 +508,7 @@ def main():
     game.setup()
     print("Finished loading")
 
-    game.current_screen = TestLevel(game)
+    game.current_screen = Level1(game)
     game.current_screen.on_screen_enter()
 
     print("Starting Game Loop")
