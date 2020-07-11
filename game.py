@@ -34,6 +34,19 @@ ui_font_64 = pygame.font.Font(gmtk_font, 64)
 ui_font_72 = pygame.font.Font(gmtk_font, 72)
 ui_font_128 = pygame.font.Font(gmtk_font, 128)
 
+## ASSETS
+black_hole_bg = pygame.image.load("assets/textures/bh_visualization.jpg")
+img_astronaut = pygame.image.load("assets/textures/astronaut/astronaut.png")
+img_astronaut_sat = pygame.image.load("assets/textures/astronaut/astronaut-sat.png")
+img_astronaut_tb = pygame.image.load("assets/textures/astronaut/astronaut-tb.png")
+img_astronaut_tb_sat = pygame.image.load("assets/textures/astronaut/astronaut-tb-sat.png")
+img_astronaut_tf = pygame.image.load("assets/textures/astronaut/astronaut-tf.png")
+img_astronaut_tf_sat = pygame.image.load("assets/textures/astronaut/astronaut-tf-sat.png")
+img_astronaut_tl = pygame.image.load("assets/textures/astronaut/astronaut-tl.png")
+img_astronaut_tl_sat = pygame.image.load("assets/textures/astronaut/astronaut-tl-sat.png")
+img_astronaut_tr = pygame.image.load("assets/textures/astronaut/astronaut-tr.png")
+img_astronaut_tr_sat = pygame.image.load("assets/textures/astronaut/astronaut-tr-sat.png")
+
 class Game:
     def __init__(self, screen):
         self.debug_font = pygame.font.Font(gmtk_font, 18)
@@ -130,6 +143,9 @@ class BaseLevel:
 
         self.level_time = 0
 
+        self.sprite_timer = 0
+        self.last_input = 0
+
         self.astronaut = pymunk.Body()
 
         # Astronaut collision model
@@ -145,9 +161,15 @@ class BaseLevel:
         poly.density = 0.005
         poly.collision_type = collision_types["astronaut"]
         self.physspace.add(self.astronaut, poly)
-        astronautsprite = EntityRenderer(pygame.image.load("assets/textures/astronaut.png"), physbody=self.astronaut)
-        astronautsprite.add(self.worldgroup)
-        self.astronaut_state = {}
+        self.astronaut_renderer = EntityRenderer(img_astronaut, physbody=self.astronaut)
+        self.astronaut_renderer.add(self.worldgroup)
+        self.astronaut_state = {"has_sat": False}
+
+        self.astronaut_sprite_normal = img_astronaut
+        self.astronaut_sprite_tf = img_astronaut_tf
+        self.astronaut_sprite_tr = img_astronaut_tr
+        self.astronaut_sprite_tb = img_astronaut_tb
+        self.astronaut_sprite_tl = img_astronaut_tl
 
         # Add physics from map tiles
         layer = "Collision"
@@ -219,12 +241,17 @@ class BaseLevel:
         # self.world.scroll((0, 1))
         self.world.center(self.astronaut.position)
 
+        # Set correct sprite
+        self.sprite_timer += dt
+
+        self.astronaut_renderer.src_image = self.get_current_astronaut_image()
+
         if self.check_win_condition() and not self.level_won:
             self.level_won = True
             self.end_level()
 
         if self.check_out_of_bounds():
-            self.game.next_screen = GameOverScreen(self.game)
+            self.game.next_screen = GameOverScreen(self.game, self.astronaut_state["has_sat"])
 
     def end_level(self):
         display_debug_message("A winner is you!")
@@ -250,15 +277,13 @@ class BaseLevel:
 
     def on_key_press(self, event):
         if event.key == pygame.K_DOWN:
-            self.astronaut.apply_impulse_at_local_point((-2000,0), (0,0))
+            self.astronaut_backward()
         if event.key == pygame.K_UP:
-            self.astronaut.apply_impulse_at_local_point((2000,0), (0,0))
+            self.astronaut_forward()
         if event.key == pygame.K_LEFT:
-            self.astronaut.apply_impulse_at_local_point((200,0), (30,60))
-            self.astronaut.apply_impulse_at_local_point((-200,0), (-30,-60))
+            self.astronaut_turn_backward()
         if event.key == pygame.K_RIGHT:
-            self.astronaut.apply_impulse_at_local_point((-200,0), (30,60))
-            self.astronaut.apply_impulse_at_local_point((200,0), (-30,-60))
+            self.astronaut_turn_forward()
 
         #Num keys 1-4: 49-51
         print('Key event: '+str(event.key))
@@ -280,15 +305,13 @@ class BaseLevel:
 
         mag = bt.magnitude
         if bt.type==3:
-            self.astronaut.apply_impulse_at_local_point((-2000*mag,0), (0,0))
+            self.astronaut_backward(mag)
         if bt.type==0:
-            self.astronaut.apply_impulse_at_local_point((2000*mag,0), (0,0))
+            self.astronaut_forward(mag)
         if bt.type==1:
-            self.astronaut.apply_impulse_at_local_point((200*mag,0), (30,60))
-            self.astronaut.apply_impulse_at_local_point((-200*mag,0), (-30,-60))
+            self.astronaut_turn_backward(mag)
         if bt.type==2:
-            self.astronaut.apply_impulse_at_local_point((-200*mag,0), (30,60))
-            self.astronaut.apply_impulse_at_local_point((200*mag,0), (-30,-60))
+            self.astronaut_turn_forward(mag)
 
         bt.animate(Animation2D((0,0),(200,200),2))
 
@@ -304,6 +327,43 @@ class BaseLevel:
         self.active_button_queue[index] = next_bt
 
         self.spawn_next_button()
+
+    def get_current_astronaut_image(self):
+        if self.sprite_timer > 0.5:
+            return self.astronaut_sprite_normal
+        else:
+            if self.last_input == 1:
+                return self.astronaut_sprite_tf
+            elif self.last_input == 2:
+                return self.astronaut_sprite_tb
+            elif self.last_input == 3:
+                return self.astronaut_sprite_tr
+            elif self.last_input == 4:
+                return self.astronaut_sprite_tl
+            else:
+                return self.astronaut_sprite_normal
+
+    def astronaut_forward(self, magnitude=1):
+        self.astronaut.apply_impulse_at_local_point((2000*magnitude,0), (0,0))
+        self.last_input = 1
+        self.sprite_timer = 0
+
+    def astronaut_backward(self, magnitude=1):
+        self.astronaut.apply_impulse_at_local_point((-2000*magnitude,0), (0,0))
+        self.last_input = 2
+        self.sprite_timer = 0
+
+    def astronaut_turn_forward(self, magnitude=1):
+        self.astronaut.apply_impulse_at_local_point((-200*magnitude,0), (30,60))
+        self.astronaut.apply_impulse_at_local_point((200*magnitude,0), (-30,-60))
+        self.last_input = 3
+        self.sprite_timer = 0
+
+    def astronaut_turn_backward(self, magnitude=1):
+        self.astronaut.apply_impulse_at_local_point((200*magnitude,0), (30,60))
+        self.astronaut.apply_impulse_at_local_point((-200*magnitude,0), (-30,-60))
+        self.last_input = 4
+        self.sprite_timer = 0
 
     def align_ui_buttons(self):
         w,h = self.get_screen_size()
@@ -400,24 +460,45 @@ class BaseLevel:
     def on_ui_input_event(self, event, source):
         pass
 
+def create_asteroid_body(group, position=(0,0), velocity=(0,0), angular_velocity=0.1):
+    asteroid = pymunk.Body()
+    asteroid.position = position
+    c = pymunk.Circle(asteroid, 27)
+    c.density = 0.1
+    c.friction = 0.4
+    asteroid.angular_velocity = angular_velocity
+    asteroid.velocity = velocity
+    EntityRenderer(pygame.image.load("assets/textures/meteor.png"), physbody=asteroid).add(group)
+    return asteroid, c
+
+def create_satellite_body(group, position=(0,0), velocity=(0,0), angular_velocity=-0.1):
+    satellite = pymunk.Body()
+    satellite.position = position
+    c = poly = pymunk.Poly(satellite, [
+            (0  - 32, 11 - 32),
+            (11 - 32, 0  - 32),
+            (43 - 32, 21 - 32),
+            (64 - 32, 53 - 32),
+            (53 - 32, 64 - 32),
+            (21 - 32, 43 - 32),
+        ])
+    c.density = 0.1
+    c.friction = 0.4
+    c.collision_type = collision_types["collectible"]
+    satellite.angular_velocity = angular_velocity
+    satellite.velocity = velocity
+    EntityRenderer(pygame.image.load("assets/textures/satellite.png"), physbody=satellite).add(group)
+    return satellite, c
 
 class Level1(BaseLevel):
     def __init__(self, game):
         super().__init__(game, map_name="level1.tmx")
 
         self.astronaut.position = (13*32, 14*32)
-        self.astronaut_state["has_mcguffin"] = False
+        self.astronaut_state["has_sat"] = False
 
-        # Test Asteroid
-        asteroid = pymunk.Body()
-        asteroid.position = (24*32,9*32)
-        c = pymunk.Circle(asteroid, 27)
-        c.density = 0.1
-        c.friction = 0.4
-        c.collision_type = collision_types["collectible"]
-        self.physspace.add(c, asteroid)
-        asteroid.angular_velocity = 0.1
-        EntityRenderer(pygame.image.load("assets/textures/meteor.png"), physbody=asteroid).add(self.worldgroup)
+        self.physspace.add(create_asteroid_body(self.worldgroup, position=(19*32,14*32)))
+        self.physspace.add(create_satellite_body(self.worldgroup, position=(24*32,9*32)))
 
         self.win_trigger = pymunk.BB(10*32,12*32,16*32,18*32)
 
@@ -426,26 +507,32 @@ class Level1(BaseLevel):
             space.remove(collectible, collectible.body)
             associated_sprites = filter(lambda s: collectible in s.physbody.shapes, self.worldgroup.sprites())
             self.worldgroup.remove(*associated_sprites)
-            self.astronaut_state["has_mcguffin"] = True
+            self.astronaut_state["has_sat"] = True
             print(self.astronaut_state)
+
+            self.astronaut_sprite_normal = img_astronaut_sat
+            self.astronaut_sprite_tf = img_astronaut_tf_sat
+            self.astronaut_sprite_tr = img_astronaut_tr_sat
+            self.astronaut_sprite_tb = img_astronaut_tb_sat
+            self.astronaut_sprite_tl = img_astronaut_tl_sat
             return False
 
         handler = self.physspace.add_collision_handler(collision_types["astronaut"], collision_types["collectible"])
         handler.pre_solve = collect
 
     def check_win_condition(self):
-        return super().check_win_condition() and self.astronaut_state["has_mcguffin"]
+        return super().check_win_condition() and self.astronaut_state["has_sat"]
 
-class GameOverScreen():
-    def __init__(self, game):
+class GameOverScreen:
+    def __init__(self, game, has_sat=False):
         self.game = game
         self.screen = game.screen
         self.group = pygame.sprite.Group()
         self.ui_group = pygame.sprite.Group()
-        self.bg_image = pygame.transform.smoothscale(pygame.image.load("assets/textures/bh_visualization.jpg"), self.get_screen_size())
+        self.bg_image = pygame.transform.smoothscale(black_hole_bg, self.get_screen_size())
 
         self.astronaut = pygame.sprite.Sprite(self.group)
-        self.astronaut_img: pygame.Surface = pygame.image.load("assets/textures/astronaut.png")
+        self.astronaut_img: pygame.Surface = img_astronaut_sat if has_sat else img_astronaut
         self.astronaut.image = self.astronaut_img
         self.astronaut.rect = self.astronaut_img.get_rect()
 
@@ -487,6 +574,7 @@ class GameOverScreen():
 
     def on_resize(self):
         size = display.get_surface().get_size()
+        self.bg_image = pygame.transform.smoothscale(black_hole_bg, self.get_screen_size())
 
     def on_key_press(self, event):
         pass
