@@ -711,15 +711,20 @@ class Level3(BaseLevel):
         self.astronaut.position = (13*32, 14*32)
         self.astronaut_state["has_sat"] = False
 
-        self.satellite, c = create_satellite_body(self.worldgroup, position=(24*32,9*32))
+        self.satellite, c = create_satellite_body(self.worldgroup, position=(8*32,4*32))
         self.physspace.add(self.satellite, c)
-        self.physspace.add(create_asteroid_body(self.worldgroup, position=(19*32,14*32)))
+        self.physspace.add(create_asteroid_body(self.worldgroup, position=(24*32,4*32)))
 
-        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(16*32,16*32), velocity=(.3,.1), angular_velocity=0.7))
-        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(16.8*32,16.2*32), velocity=(.1,-.1), angular_velocity=-0.2))
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(17*32,13*32), velocity=(.3,.1), angular_velocity=0.7))
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(17*32,14*32), velocity=(.1,-.1), angular_velocity=-0.2))
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(17*32,15*32), velocity=(.5, -.1),angular_velocity=0.5))
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(17*32,16*32), velocity=(-.5,-.1),angular_velocity=-0.57))
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(17*32,17*32), velocity=(-.7,-.1),angular_velocity=0.2))
         self.physspace.add(create_clutter_body(self.worldgroup, "wrench", position=(15*32,14*32)))
+        self.physspace.add(create_clutter_body(self.worldgroup, "wrench", position=(16*32,5*32)))
         self.physspace.add(create_clutter_body(self.worldgroup, "can", position=(19.5*32,17.2*32)))
-        self.physspace.add(create_clutter_body(self.worldgroup, "cat", position=(26*32,12*32), velocity=(-0.7, 0.1), angular_velocity=0.2))
+        self.physspace.add(create_clutter_body(self.worldgroup, "can", position=(23.5*32,8*32)))
+        self.physspace.add(create_clutter_body(self.worldgroup, "cat", position=(28*32,12*32), velocity=(-0.7, 0.1), angular_velocity=0.2))
 
 
         self.win_trigger = pymunk.BB(10*32,12*32,16*32,18*32)
@@ -1224,7 +1229,7 @@ def main():
     game.setup()
     print("Finished loading")
 
-    game.current_screen = Level2(game)
+    game.current_screen = Level3(game)
     game.current_screen.on_screen_enter()
 
     print("Starting Game Loop")
