@@ -1,8 +1,8 @@
 import os
+import random
 import typing
 from datetime import datetime
 from math import floor
-import random
 
 import numpy as np
 import pygame
@@ -20,7 +20,10 @@ MAX_FPS = 60
 screen_width = 1500
 screen_height = floor(screen_width / (16 / 9))
 
-black = 0, 0, 0
+black = (0, 0, 0)
+white = (0, 0, 0)
+
+countdown_intervals = [8,10,12,14]
 
 display = pygame.display
 main_screen: pygame.Surface = display.set_mode((screen_width, screen_height), pygame.RESIZABLE)
@@ -200,16 +203,13 @@ class BaseLevel:
         self.ordered_button_group = pygame.sprite.OrderedUpdates()
         for i in range(4):
             bt = ControlButton(self,random.randint(0,3),self.get_button_x(i))
+            bt.countdown_dt = countdown_intervals[i]*2
             self.active_button_queue.append(bt)
             self.ordered_button_group.add(bt)
 
         self.spawn_next_button()
         self.spawn_next_button()
-        #for i in range(4):
-        #    bt = ControlButton(self, random.randint(0, 3), self.get_button_x(i+4))
-        #    self.waiting_button_queue.append(bt)
-        #    self.button_group.add(bt)
-        #    self.ordered_button_group.add(bt)
+        self.spawn_next_button()
 
     def load_map(self, map_id):
         self.map = load_pygame("assets/maps/" + map_id)
@@ -245,6 +245,12 @@ class BaseLevel:
         self.sprite_timer += dt
 
         self.astronaut_renderer.src_image = self.get_current_astronaut_image()
+
+        for i in range(len(self.active_button_queue)):
+            bt = self.active_button_queue[i]
+            if bt.expired:
+                display_debug_message('Button expired!')
+                self.on_control_button_pressed(i)
 
         if self.check_win_condition() and not self.level_won:
             self.level_won = True
@@ -298,7 +304,7 @@ class BaseLevel:
 
     def on_control_button_pressed(self,index):
         bt = self.active_button_queue[index]
-        if bt is None:
+        if bt is None or not bt.active:
             display_debug_message('This action is not ready yet')
             #TODO: Display message
             return
@@ -316,17 +322,26 @@ class BaseLevel:
         bt.animate(Animation2D((0,0),(200,200),2))
 
         bt.on_execute()
-        bt.stop_animations()
+        #bt.stop_animations()
         #self.active_button_queue[index] = None
         self.ordered_button_group.remove(bt)
 
         next_bt = self.waiting_button_queue.pop(0)
-        distance_x= bt.get_sprite_position_x() - next_bt.get_sprite_position_x()
+        distance_x= self.get_button_x(index) - next_bt.get_sprite_position_x()
         next_bt.stop_animations()
         next_bt.animate(Animation2D((0,0),(distance_x,0),.5))
+        next_bt.countdown_dt = countdown_intervals[index]
         self.active_button_queue[index] = next_bt
 
         self.spawn_next_button()
+        for i in range(len(self.waiting_button_queue)):
+            bt = self.waiting_button_queue[i]
+            current_x = bt.get_sprite_position_x()
+            target_x = self.get_button_x(i+4)
+            distance_x= target_x - current_x
+            bt.stop_animations()
+            bt.animate(Animation2D((0,0),(distance_x,0),.5))
+
 
     def get_current_astronaut_image(self):
         if self.sprite_timer > 0.5:
@@ -391,7 +406,7 @@ class BaseLevel:
         self.waiting_button_queue.append(bt)
         self.ordered_button_group.add(bt)
 
-        display_debug_message('Actives: '+str(len(self.active_button_queue))+'. Waiting: '+str(len(self.waiting_button_queue)))
+        #display_debug_message('Actives: '+str(len(self.active_button_queue))+'. Waiting: '+str(len(self.waiting_button_queue)))
 
     def check_win_condition(self):
         return self.win_trigger.contains_vect(self.astronaut.position)
@@ -421,6 +436,20 @@ class BaseLevel:
 
         #self.button_group.draw(screen)
         self.ordered_button_group.draw(screen)
+
+        # Drawing Progressbars
+        for i in range(4):
+            bx = self.get_button_x(i)
+            progressbar_x = bx + 35
+            progressbar_w = 36*3
+            pygame.draw.rect(screen,black,(progressbar_x,h-bh-60,progressbar_w,36))
+
+            bt = self.active_button_queue[i]
+            p = 0.0
+            if bt is not None:
+                p = float(bt.get_countdown_progress())
+            pygame.draw.rect(screen,(255,0,0),(progressbar_x,h-bh-60,int(progressbar_w*p),36))
+
 
         # Drawing conveyor background
         screen.blit(self.button_bg,(w/2-128*3, h-72*3))
@@ -452,7 +481,7 @@ class BaseLevel:
         pass
 
     def on_screen_exit(self):
-        pass
+        display_debug_message('Leaving game screen.')
 
     def on_input_event(self, event):
         pass
@@ -578,7 +607,6 @@ class GameOverScreen:
 
     def on_key_press(self, event):
         pass
-
 
     def on_key_release(self, event):
         pass
@@ -848,14 +876,18 @@ class AnimatedEntity(Sprite):
 
 class ControlButton(AnimatedEntity):
 
-    def __init__(self, level, type:int, x, magnitude = 1,active:bool=True):
+    def __init__(self, level, type:int, x, magnitude = 1,active:bool=True,countdown_dt=3):
         super().__init__()
         self.level=level
         self.type = type
         self.magnitude =magnitude
         self.active = active
+        self.expired = False
 
         w,h = level.get_screen_size()
+
+        self.countdown_dt=countdown_dt
+        self.countdown_current=0
 
         if type==0:
             self.image=level.btn_decelerate_img
@@ -876,6 +908,24 @@ class ControlButton(AnimatedEntity):
 
     def update(self, dt):
         super().update(dt)
+
+        if self.active:
+            self.countdown_current += dt
+
+        if self.countdown_current >= self.countdown_dt:
+            self.expired = True
+
+    def get_countdown_progress(self):
+        return float(self.countdown_current) / float(self.countdown_dt)
+
+    def animate(self, animation: Animation2D):
+        super().animate(animation)
+
+        def finished():
+            if self in self.level.active_button_queue:
+                self.active = True
+
+        animation.add_animation_finished_callback(finished)
 
 
 class TextSprite(AnimatedEntity):
