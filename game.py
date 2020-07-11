@@ -2,6 +2,7 @@ import os
 import typing
 from datetime import datetime
 from math import floor
+import random
 
 import numpy as np
 import pygame
@@ -105,10 +106,10 @@ class BaseLevel:
         self.physspace = pymunk.Space()
         self.physspace.gravity = 0, 0
 
-        self.btn_accelerate = None
-        self.btn_decelerate = None
-        self.btn_left = None
-        self.btn_right = None
+        self.btn_accelerate_img = None
+        self.btn_decelerate_img = None
+        self.btn_left_img = None
+        self.btn_right_img = None
 
         self.world: pyscroll.BufferedRenderer = None
         self.load_map(map_name)
@@ -155,6 +156,13 @@ class BaseLevel:
 
         self.win_trigger = pymunk.BB(10,10,200,200)
 
+        self.button_queue = []
+        self.button_group = pygame.sprite.Group()
+        for i in range(4):
+            bt = ControlButton(self,random.randint(0,3),self.get_button_x(i))
+            self.button_queue.append(bt)
+            self.button_group.add(bt)
+
     def load_map(self, map_id):
         self.map = load_pygame("assets/maps/" + map_id)
         self.map_data = pyscroll.TiledMapData(self.map)
@@ -164,19 +172,21 @@ class BaseLevel:
 
         # Loading buttons
         btn = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_down.png")
-        self.btn_accelerate = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
+        self.btn_accelerate_img = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
         btn = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_up.png")
-        self.btn_decelerate = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
+        self.btn_decelerate_img = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
         btn = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_left.png")
-        self.btn_left = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
+        self.btn_left_img = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
         btn = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_right.png")
-        self.btn_right = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
+        self.btn_right_img = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
 
         self.worldgroup = pyscroll.PyscrollGroup(map_layer=self.world)
 
     def update(self, dt):
         self.physspace.step(dt)
         self.worldgroup.update(dt)
+        self.button_group.update(dt)
+
         # self.world.scroll((0, 1))
         self.world.center(self.astronaut.position)
 
@@ -205,6 +215,37 @@ class BaseLevel:
             self.astronaut.apply_impulse_at_local_point((-200,0), (30,60))
             self.astronaut.apply_impulse_at_local_point((200,0), (-30,-60))
 
+        #Num keys 1-4: 49-51
+        print('Key event: '+str(event.key))
+        if event.key == 49:
+            self.on_control_button_pressed(0)
+        if event.key == 50:
+            self.on_control_button_pressed(1)
+        if event.key == 51:
+            self.on_control_button_pressed(2)
+        if event.key == 52:
+            self.on_control_button_pressed(3)
+
+    def on_control_button_pressed(self,index):
+        bt = self.button_queue[index]
+        if bt is None:
+            return
+
+        if bt.type==0:
+            self.astronaut.apply_impulse_at_local_point((-2000,0), (0,0))
+        if bt.type==3:
+            self.astronaut.apply_impulse_at_local_point((2000,0), (0,0))
+        if bt.type==1:
+            self.astronaut.apply_impulse_at_local_point((200,0), (30,60))
+            self.astronaut.apply_impulse_at_local_point((-200,0), (-30,-60))
+        if bt.type==2:
+            self.astronaut.apply_impulse_at_local_point((-200,0), (30,60))
+            self.astronaut.apply_impulse_at_local_point((200,0), (-30,-60))
+
+        bt.on_execute()
+        self.button_queue[index] = None
+        self.button_group.remove(bt)
+
     def check_win_condition(self):
         return self.win_trigger.contains_vect(self.astronaut.position)
 
@@ -219,7 +260,7 @@ class BaseLevel:
 
     def render_ui(self, screen):
         w, h = self.get_screen_size()
-        bw, bh = self.btn_right.get_size()
+        bw, bh = self.btn_right_img.get_size()
 
         # Drawing conveyor background
         pygame.draw.rect(screen, black, (self.get_button_x(0)-30, h-bh-30, self.get_button_x(4)-self.get_button_x(0)+60-8, h))
@@ -231,14 +272,16 @@ class BaseLevel:
         # Drawing buttons
         for i in range(4):
             bx = self.get_button_x(i)
-            screen.blit(self.btn_right, (bx, h - bh))
+            #screen.blit(self.btn_right_img, (bx, h - bh))
             hotkey_text = ui_font.render(str(i+1),False,(255,255,255))
-            screen.blit(hotkey_text,(bx+bw/2,h-bh-32))
+            screen.blit(hotkey_text,(bx,h-bh-32))
+
+        self.button_group.draw(screen)
 
     def get_button_x(self, index):
         w, h = self.get_screen_size()
-        bw, bh = self.btn_right.get_size()
-        button_offset = 4
+        bw, bh = self.btn_right_img.get_size()
+        button_offset = 6
         bw = bw + button_offset*2
 
         return (w / 2) - (bw*2) + (button_offset) + (bw * index)
@@ -463,6 +506,100 @@ class EntityRenderer(Sprite):
 
     def animate(self, animation: Animation2D):
         self.animations.append(animation)
+
+class AnimatedEntity(Sprite):
+
+    def __init__(self, *groups):
+        super().__init__(*groups)
+
+        self._sprite_x = 0
+        self._sprite_y = 0
+        self.image = None
+        self.rect: pygame.Rect = None
+
+        self.animations: typing.List[Animation2D] = []
+
+    def update(self, dt):
+        super().update(dt)
+
+        if self.animations:
+            for anim in self.animations:
+                anim.update(dt)
+
+                # Is the animation done?
+                if anim.is_finished():
+                    # If yes, remove the animation and apply any permanent movement
+                    self.animations.remove(anim)
+
+                    # TODO maybe temporary animations that reset?
+                    self._sprite_x += anim.get_animation_x()
+                    self._sprite_y += anim.get_animation_y()
+
+            # Add all animation movement
+            self.rect.x = self._sprite_x + sum(map(lambda a: a.get_animation_x(), self.animations))
+            self.rect.y = self._sprite_y + sum(map(lambda a: a.get_animation_y(), self.animations))
+        else:
+            self.rect.x = self._sprite_x
+            self.rect.y = self._sprite_y
+
+
+    def set_sprite_position(self, x=None, y=None, stop_animations=True):
+        if x is not None:
+            self._sprite_x = x
+        if y is not None:
+            self._sprite_y = y
+
+        if stop_animations:
+            self.stop_animations()
+
+    def get_sprite_position_x(self):
+        return self._sprite_x + sum(map(lambda a: a.get_animation_x(), self.animations))
+
+    def get_sprite_position_y(self):
+        return self._sprite_y + sum(map(lambda a: a.get_animation_y(), self.animations))
+
+    def stop_animations(self, reset_position=False):
+        for anim in self.animations:
+            anim.stop()
+            if not reset_position:
+                self._sprite_x += anim.get_animation_x()
+                self._sprite_y += anim.get_animation_y()
+        self.animations.clear()
+
+    def is_animation_active(self):
+        return len(self.animations) > 0
+
+    def animate(self, animation: Animation2D):
+        self.animations.append(animation)
+
+class ControlButton(AnimatedEntity):
+
+    def __init__(self, level, type:int, x):
+        super().__init__()
+        self.level=level
+        self.type = type
+        w,h = level.get_screen_size()
+
+        if type==0:
+            self.image=level.btn_decelerate_img
+        if type==1:
+            self.image=level.btn_left_img
+        if type==2:
+            self.image=level.btn_right_img
+        if type==3:
+            self.image=level.btn_accelerate_img
+        self.rect: pygame.Rect = self.image.get_rect()
+
+        sw,sh = self.image.get_size()
+        self._sprite_x = x
+        self._sprite_y = h-sh
+
+    def on_execute(self):
+        pass
+
+    def update(self, dt):
+        super().update(dt)
+
 
 
 ### DEBUG MESSAGES
