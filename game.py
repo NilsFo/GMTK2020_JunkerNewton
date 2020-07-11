@@ -32,7 +32,7 @@ ui_font = pygame.font.Font(gmtk_font, 30)
 
 class Game:
     def __init__(self, screen):
-        self.debug_font = pygame.font.Font(gmtk_font, 12)
+        self.debug_font = pygame.font.Font(gmtk_font, 18)
 
         self.current_screen: BaseLevel = None
         self.screen: pygame.Surface = screen
@@ -111,6 +111,12 @@ class BaseLevel:
         self.btn_left_img = None
         self.btn_right_img = None
 
+        button_bg_base = pygame.image.load("assets/textures/ButtonBG.png")
+        self.button_bg = pygame.transform.scale(button_bg_base, np.array(button_bg_base.get_size()) * 3)
+
+        conveyor_bg_base = pygame.image.load("assets/textures/ConveyorBG.png")
+        self.conveyor_bg = pygame.transform.scale(conveyor_bg_base, np.array(conveyor_bg_base.get_size()) * 3)
+
         self.world: pyscroll.BufferedRenderer = None
         self.load_map(map_name)
 
@@ -131,7 +137,6 @@ class BaseLevel:
         self.physspace.add(self.astronaut, poly)
         astronautsprite = EntityRenderer(pygame.image.load("assets/textures/astronaut.png"), physbody=self.astronaut)
         astronautsprite.add(self.worldgroup)
-
         self.astronaut_state = {}
 
         # Add physics from map tiles
@@ -156,12 +161,23 @@ class BaseLevel:
 
         self.win_trigger = pymunk.BB(10,10,200,200)
 
-        self.button_queue = []
+        self.active_button_queue = []
+        self.waiting_button_queue = []
         self.button_group = pygame.sprite.Group()
+        self.ordered_button_group = pygame.sprite.OrderedUpdates()
         for i in range(4):
             bt = ControlButton(self,random.randint(0,3),self.get_button_x(i))
-            self.button_queue.append(bt)
+            self.active_button_queue.append(bt)
             self.button_group.add(bt)
+            self.ordered_button_group.add(bt)
+
+        self.spawn_next_button()
+        self.spawn_next_button()
+        #for i in range(4):
+        #    bt = ControlButton(self, random.randint(0, 3), self.get_button_x(i+4))
+        #    self.waiting_button_queue.append(bt)
+        #    self.button_group.add(bt)
+        #    self.ordered_button_group.add(bt)
 
     def load_map(self, map_id):
         self.map = load_pygame("assets/maps/" + map_id)
@@ -202,6 +218,7 @@ class BaseLevel:
         view_center = self.world.view_rect.center
         self.world.set_size(size)
         self.world.center(view_center)
+        self.align_ui_buttons()
 
     def on_key_press(self, event):
         if event.key == pygame.K_DOWN:
@@ -227,24 +244,67 @@ class BaseLevel:
             self.on_control_button_pressed(3)
 
     def on_control_button_pressed(self,index):
-        bt = self.button_queue[index]
+        bt = self.active_button_queue[index]
         if bt is None:
+            display_debug_message('This action is not ready yet')
+            #TODO: Display message
             return
 
+        mag = bt.magnitude
         if bt.type==0:
-            self.astronaut.apply_impulse_at_local_point((-2000,0), (0,0))
+            self.astronaut.apply_impulse_at_local_point((-2000*mag,0), (0,0))
         if bt.type==3:
-            self.astronaut.apply_impulse_at_local_point((2000,0), (0,0))
+            self.astronaut.apply_impulse_at_local_point((2000*mag,0), (0,0))
         if bt.type==1:
-            self.astronaut.apply_impulse_at_local_point((200,0), (30,60))
-            self.astronaut.apply_impulse_at_local_point((-200,0), (-30,-60))
+            self.astronaut.apply_impulse_at_local_point((200*mag,0), (30,60))
+            self.astronaut.apply_impulse_at_local_point((-200*mag,0), (-30,-60))
         if bt.type==2:
-            self.astronaut.apply_impulse_at_local_point((-200,0), (30,60))
-            self.astronaut.apply_impulse_at_local_point((200,0), (-30,-60))
+            self.astronaut.apply_impulse_at_local_point((-200*mag,0), (30,60))
+            self.astronaut.apply_impulse_at_local_point((200*mag,0), (-30,-60))
+
+        bt.animate(Animation2D((0,0),(200,200),2))
 
         bt.on_execute()
-        self.button_queue[index] = None
-        self.button_group.remove(bt)
+        bt.stop_animations()
+        #self.active_button_queue[index] = None
+        self.ordered_button_group.remove(bt)
+
+        next_bt = self.waiting_button_queue.pop(0)
+        distance_x= bt.get_sprite_position_x() - next_bt.get_sprite_position_x()
+        next_bt.stop_animations()
+        next_bt.animate(Animation2D((0,0),(distance_x,0),.5))
+        self.active_button_queue[index] = next_bt
+
+        self.spawn_next_button()
+
+    def align_ui_buttons(self):
+        w,h = self.get_screen_size()
+        sw,sh = self.btn_left_img.get_size()
+
+        i = 0
+        for bt in self.active_button_queue + self.waiting_button_queue:
+            if bt is None:
+                i+=1
+                continue
+
+            #bt.set_sprite_position(y=0,stop_animations=False)
+            bx = self.get_button_x(i)
+            bt._sprite_y = h-sh-8*3
+            bt.rect.y = 0
+            bt._sprite_x = bx
+            bt._sprite_x = bx
+            i+=1
+
+    def spawn_next_button(self):
+        type = random.randint(0,3)
+        w,h = self.get_screen_size()
+        x = w+100
+        bt = ControlButton(self,type,x,1,active=False)
+        self.waiting_button_queue.append(bt)
+        self.button_group.add(bt)
+        self.ordered_button_group.add(bt)
+
+        display_debug_message('Actives: '+str(len(self.active_button_queue))+'. Waiting: '+str(len(self.waiting_button_queue)))
 
     def check_win_condition(self):
         return self.win_trigger.contains_vect(self.astronaut.position)
@@ -262,29 +322,39 @@ class BaseLevel:
         w, h = self.get_screen_size()
         bw, bh = self.btn_right_img.get_size()
 
-        # Drawing conveyor background
-        pygame.draw.rect(screen, black, (self.get_button_x(0)-30, h-bh-30, self.get_button_x(4)-self.get_button_x(0)+60-8, h))
-
         # Drawing debug target
         pygame.draw.line(screen,(255,255,255),(0,h/2),(w,h/2))
         pygame.draw.line(screen,(255,255,255),(w/2,0),(w/2,h))
 
-        # Drawing buttons
+        # Drawing conveyor
+        conveyor_count = int(((w/2)/16*3)) + 1
+        for i in range(conveyor_count):
+            conv_mod = i*16*3
+            screen.blit(self.conveyor_bg,(w/2+128*3+conv_mod,h-62*3-6))
+
+        #self.button_group.draw(screen)
+        self.ordered_button_group.draw(screen)
+
+        # Drawing conveyor background
+        screen.blit(self.button_bg,(w/2-128*3, h-72*3))
+
+        # Drawing hotkeys
         for i in range(4):
             bx = self.get_button_x(i)
-            #screen.blit(self.btn_right_img, (bx, h - bh))
-            hotkey_text = ui_font.render(str(i+1),False,(255,255,255))
-            screen.blit(hotkey_text,(bx,h-bh-32))
-
-        self.button_group.draw(screen)
+            hotkey_text = ui_font.render(str(i+1),False,(0,0,0))
+            screen.blit(hotkey_text,(bx+5,h-bh-65))
 
     def get_button_x(self, index):
         w, h = self.get_screen_size()
         bw, bh = self.btn_right_img.get_size()
-        button_offset = 6
+        button_offset = 9
         bw = bw + button_offset*2
 
-        return (w / 2) - (bw*2) + (button_offset) + (bw * index)
+        conveyor_adjustment = 0
+        if index >3:
+            conveyor_adjustment = 27*3
+
+        return (w / 2) - (bw*2) + (button_offset) + (bw * index) +conveyor_adjustment
 
     def get_button_ui_width(self):
         return self.get_button_x(1)-self.get_button_x(0)
@@ -348,7 +418,7 @@ class Animation2D:
         super().__init__()
         self.vector_from = vector_from
         self.vector_to = vector_to
-        self.ticks = int(duration * 1000)
+        self.ticks = duration
         if isinstance(interpolation, Interpolation):
             self.interpolation_x = interpolation
             self.interpolation_y = interpolation
@@ -574,10 +644,13 @@ class AnimatedEntity(Sprite):
 
 class ControlButton(AnimatedEntity):
 
-    def __init__(self, level, type:int, x):
+    def __init__(self, level, type:int, x, magnitude = 1,active:bool=True):
         super().__init__()
         self.level=level
         self.type = type
+        self.magnitude =magnitude
+        self.active = active
+
         w,h = level.get_screen_size()
 
         if type==0:
@@ -592,7 +665,7 @@ class ControlButton(AnimatedEntity):
 
         sw,sh = self.image.get_size()
         self._sprite_x = x
-        self._sprite_y = h-sh
+        self._sprite_y = h-sh-8*3
 
     def on_execute(self):
         pass
