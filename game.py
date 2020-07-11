@@ -122,6 +122,10 @@ collision_types = {
     "collectible": 2
 }
 
+def create_button_bag():
+    bag = [0,0,1,1,2,2,3,3]
+    random.shuffle(bag)
+    return iter(bag)
 
 class BaseLevel:
     def __init__(self, game, map_name="test_dungeon.tmx"):
@@ -134,6 +138,8 @@ class BaseLevel:
         self.btn_decelerate_img = None
         self.btn_left_img = None
         self.btn_right_img = None
+
+        self.button_bag = create_button_bag()
 
         button_bg_base = pygame.image.load("assets/textures/ButtonBG.png")
         self.button_bg = pygame.transform.scale(button_bg_base, np.array(button_bg_base.get_size()) * 3)
@@ -202,7 +208,7 @@ class BaseLevel:
         self.ui_group = pygame.sprite.Group()
         self.ordered_button_group = pygame.sprite.OrderedUpdates()
         for i in range(4):
-            bt = ControlButton(self,random.randint(0,3),self.get_button_x(i))
+            bt = ControlButton(self,next(self.button_bag),self.get_button_x(i))
             bt.countdown_dt = countdown_intervals[i]*2
             self.active_button_queue.append(bt)
             self.ordered_button_group.add(bt)
@@ -399,10 +405,14 @@ class BaseLevel:
             i+=1
 
     def spawn_next_button(self):
-        type = random.randint(0,3)
+        try:
+            bt_type = next(self.button_bag)
+        except StopIteration:
+            self.button_bag = create_button_bag()
+            bt_type = next(self.button_bag)
         w,h = self.get_screen_size()
         x = w+100
-        bt = ControlButton(self,type,x,1,active=False)
+        bt = ControlButton(self,bt_type,x,1,active=False)
         self.waiting_button_queue.append(bt)
         self.ordered_button_group.add(bt)
 
@@ -425,8 +435,8 @@ class BaseLevel:
         bw, bh = self.btn_right_img.get_size()
 
         # Drawing debug target
-        pygame.draw.line(screen,(255,255,255),(0,h/2),(w,h/2))
-        pygame.draw.line(screen,(255,255,255),(w/2,0),(w/2,h))
+        #pygame.draw.line(screen,(255,255,255),(0,h/2),(w,h/2))
+        #pygame.draw.line(screen,(255,255,255),(w/2,0),(w/2,h))
 
         # Drawing conveyor
         conveyor_count = int(((w/2)/16*3)) + 1
@@ -553,9 +563,10 @@ class Level1(BaseLevel):
         return super().check_win_condition() and self.astronaut_state["has_sat"]
 
 class GameOverScreen:
-    def __init__(self, game, has_sat=False):
+    def __init__(self, game, has_sat=False, reset_level=Level1):
         self.game = game
         self.screen = game.screen
+        self.reset_level = reset_level
         self.group = pygame.sprite.Group()
         self.ui_group = pygame.sprite.Group()
         self.bg_image = pygame.transform.smoothscale(black_hole_bg, self.get_screen_size())
@@ -609,7 +620,7 @@ class GameOverScreen:
         pass
 
     def on_key_release(self, event):
-        pass
+        game.next_screen = self.reset_level(self.game)
 
     def get_screen_size(self):
         return self.game.screen.get_size()
