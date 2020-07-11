@@ -212,6 +212,7 @@ class BaseLevel:
         self.physspace.step(dt)
         self.worldgroup.update(dt)
         self.ui_group.update(dt)
+        self.ordered_button_group.update(dt)
 
         self.level_time += dt
 
@@ -278,9 +279,9 @@ class BaseLevel:
             return
 
         mag = bt.magnitude
-        if bt.type==0:
-            self.astronaut.apply_impulse_at_local_point((-2000*mag,0), (0,0))
         if bt.type==3:
+            self.astronaut.apply_impulse_at_local_point((-2000*mag,0), (0,0))
+        if bt.type==0:
             self.astronaut.apply_impulse_at_local_point((2000*mag,0), (0,0))
         if bt.type==1:
             self.astronaut.apply_impulse_at_local_point((200*mag,0), (30,60))
@@ -328,7 +329,6 @@ class BaseLevel:
         x = w+100
         bt = ControlButton(self,type,x,1,active=False)
         self.waiting_button_queue.append(bt)
-        self.button_group.add(bt)
         self.ordered_button_group.add(bt)
 
         display_debug_message('Actives: '+str(len(self.active_button_queue))+'. Waiting: '+str(len(self.waiting_button_queue)))
@@ -463,14 +463,13 @@ class GameOverScreen():
         self.group.update(dt)
         self.ui_group.update(dt)
 
-
         self.astronaut_scale -= 0.25*dt
         self.astronaut_rot += 160*dt
 
         if self.astronaut_scale <= 0.1:
             self.group.remove(self.astronaut)
 
-        self.quote.rect.center = (self.get_screen_size()[0]//2, self.get_screen_size()[1]//2)
+        self.quote.rect.center = (self.get_screen_size()[0]//2, self.get_screen_size()[1]//2+300)
         self.quote_alpha += 0.3*dt
         self.quote.image.set_alpha(0)
         self.quote.image.set_alpha(int(255*max(0., min(1., self.quote_alpha))))
