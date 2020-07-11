@@ -51,23 +51,23 @@ img_astronaut_tr = pygame.image.load("assets/textures/astronaut/astronaut-tr.png
 img_astronaut_tr_sat = pygame.image.load("assets/textures/astronaut/astronaut-tr-sat.png")
 
 # LOADING ACTIVE BUTTONS
-btn_accelerate_img = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_down.png")
+btn_accelerate_img = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_down1.png")
 btn_accelerate_img = pygame.transform.scale(btn_accelerate_img, np.array(btn_accelerate_img.get_size()) * 3)
-btn_decelerate_img = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_up.png")
+btn_decelerate_img = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_up1.png")
 btn_decelerate_img = pygame.transform.scale(btn_decelerate_img, np.array(btn_decelerate_img.get_size()) * 3)
-btn_left_img = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_left.png")
+btn_left_img = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_left1.png")
 btn_left_img = pygame.transform.scale(btn_left_img, np.array(btn_left_img.get_size()) * 3)
-btn_right_img = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_right.png")
+btn_right_img = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_right1.png")
 btn_right_img = pygame.transform.scale(btn_right_img, np.array(btn_right_img.get_size()) * 3)
 
 # LOADING DISABLED BUTTONS
-btn_accelerate_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_down_g.png")
+btn_accelerate_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_down2.png")
 btn_accelerate_img_disabled = pygame.transform.scale(btn_accelerate_img_disabled, np.array(btn_accelerate_img_disabled.get_size()) * 3)
-btn_decelerate_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_up_g.png")
+btn_decelerate_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_up2.png")
 btn_decelerate_img_disabled = pygame.transform.scale(btn_decelerate_img_disabled, np.array(btn_decelerate_img_disabled.get_size()) * 3)
-btn_left_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_left_g.png")
+btn_left_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_left2.png")
 btn_left_img_disabled = pygame.transform.scale(btn_left_img_disabled, np.array(btn_left_img_disabled.get_size()) * 3)
-btn_right_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_right_g.png")
+btn_right_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_right2.png")
 btn_right_img_disabled = pygame.transform.scale(btn_right_img_disabled, np.array(btn_right_img_disabled.get_size()) * 3)
 
 
@@ -355,7 +355,7 @@ class BaseLevel:
         if bt.type==2:
             self.astronaut_turn_forward(mag)
 
-        bt.animate(Animation2D((0,0),(200,200),2))
+        bt.animate(Animation2D((0,0),(200,200),2,interpolation=bounce()))
 
         bt.on_execute()
         #bt.stop_animations()
