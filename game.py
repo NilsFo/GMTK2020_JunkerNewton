@@ -260,15 +260,15 @@ class BaseLevel:
 
         if self.check_win_condition() and not self.level_won:
             self.level_won = True
-            self.end_level()
+            self.level_win()
 
         if self.check_out_of_bounds():
-            self.game.next_screen = GameOverScreen(self.game, self.astronaut_state["has_sat"])
+            self.game.next_screen = GameOverScreen(self.game, self.astronaut_state["has_sat"], self.__class__)
 
-    def end_level(self):
+    def level_win(self):
         display_debug_message("A winner is you!")
         t = TextSprite("MISSION ACCOMPLISHED", ui_font_128, self.ui_group)
-        t.set_sprite_position(screen_width//2, screen_height//2, center=True)
+        t.set_sprite_position(self.get_screen_size()[0]//2, self.get_screen_size()[1]//2, center=True)
 
     def check_out_of_bounds(self):
         grace = 100
@@ -499,16 +499,41 @@ class BaseLevel:
     def on_ui_input_event(self, event, source):
         pass
 
+
+## PHYSICS BODY CREATORS
+
 def create_asteroid_body(group, position=(0,0), velocity=(0,0), angular_velocity=0.1):
     asteroid = pymunk.Body()
     asteroid.position = position
     c = pymunk.Circle(asteroid, 27)
-    c.density = 0.1
+    c.density = 0.08
     c.friction = 0.4
     asteroid.angular_velocity = angular_velocity
     asteroid.velocity = velocity
     EntityRenderer(pygame.image.load("assets/textures/meteor.png"), physbody=asteroid).add(group)
     return asteroid, c
+
+
+def create_clutter_body(group, clutter_type="beer", position=(0,0), velocity=(0,0), angular_velocity=0.1):
+    clutter = pymunk.Body()
+    clutter.position = position
+    if clutter_type == "beer":
+        img = pygame.image.load("assets/textures/beer.png")
+    elif clutter_type == "wrench":
+        img = pygame.image.load("assets/textures/wrench.png")
+    elif clutter_type == "platine":
+        img = pygame.image.load("assets/textures/platine.png")
+    elif clutter_type == "can":
+        img = pygame.image.load("assets/textures/can.png")
+    elif clutter_type == "cat":
+        img = pygame.image.load("assets/textures/spacecat.png")
+    c = pymunk.Poly.create_box(clutter, (img.get_width(), img.get_height()))
+    c.density = 0.001
+    c.friction = 0.4
+    clutter.angular_velocity = angular_velocity
+    clutter.velocity = velocity
+    EntityRenderer(img, physbody=clutter).add(group)
+    return clutter, c
 
 def create_satellite_body(group, position=(0,0), velocity=(0,0), angular_velocity=-0.1):
     satellite = pymunk.Body()
@@ -521,7 +546,7 @@ def create_satellite_body(group, position=(0,0), velocity=(0,0), angular_velocit
             (53 - 32, 64 - 32),
             (21 - 32, 43 - 32),
         ])
-    c.density = 0.1
+    c.density = 0.05
     c.friction = 0.4
     c.collision_type = collision_types["collectible"]
     satellite.angular_velocity = angular_velocity
@@ -538,6 +563,12 @@ class Level1(BaseLevel):
 
         self.physspace.add(create_asteroid_body(self.worldgroup, position=(19*32,14*32)))
         self.physspace.add(create_satellite_body(self.worldgroup, position=(24*32,9*32)))
+
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(16*32,16*32), velocity=(.3,.1), angular_velocity=0.7))
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(16.8*32,16.2*32), velocity=(.1,-.1), angular_velocity=-0.2))
+        self.physspace.add(create_clutter_body(self.worldgroup, "wrench", position=(15*32,14*32)))
+        self.physspace.add(create_clutter_body(self.worldgroup, "can", position=(19.5*32,17.2*32)))
+        self.physspace.add(create_clutter_body(self.worldgroup, "cat", position=(26*32,12*32), velocity=(-0.7, 0.1), angular_velocity=0.2))
 
         self.win_trigger = pymunk.BB(10*32,12*32,16*32,18*32)
 
@@ -563,7 +594,7 @@ class Level1(BaseLevel):
         return super().check_win_condition() and self.astronaut_state["has_sat"]
 
 class GameOverScreen:
-    def __init__(self, game, has_sat=False, reset_level=Level1):
+    def __init__(self, game, has_sat=False, reset_level:typing.ClassVar[BaseLevel]=Level1):
         self.game = game
         self.screen = game.screen
         self.reset_level = reset_level
@@ -620,7 +651,8 @@ class GameOverScreen:
         pass
 
     def on_key_release(self, event):
-        game.next_screen = self.reset_level(self.game)
+        if self.quote_alpha > 0:
+            game.next_screen = self.reset_level(self.game)
 
     def get_screen_size(self):
         return self.game.screen.get_size()
