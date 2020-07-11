@@ -1,13 +1,13 @@
-import pygame
-
-from math import floor
+import os
+import typing
 from datetime import datetime
+from math import floor
 
-import pyscroll
+import numpy as np
+import pygame
 import pymunk
 import pymunk.pygame_util
-import typing
-
+import pyscroll
 from pygame.sprite import Sprite
 from pytmx import load_pygame
 
@@ -25,10 +25,13 @@ display = pygame.display
 main_screen: pygame.Surface = display.set_mode((screen_width, screen_height), pygame.RESIZABLE)
 pygame.display.set_caption("Junker Newton")
 
+gmtk_font = "assets/fonts/FiraSans-Regular.ttf"
+
+ui_font = pygame.font.Font(gmtk_font, 30)
 
 class Game:
     def __init__(self, screen):
-        self.debug_font = pygame.font.Font("assets/fonts/FiraSans-Regular.ttf", 12)
+        self.debug_font = pygame.font.Font(gmtk_font, 12)
 
         self.current_screen: Level = None
         self.screen: pygame.Surface = screen
@@ -82,7 +85,7 @@ class Game:
             debug_messages_apply_delta_time(dt)
 
             pygame.display.flip()
-            dt = clock.tick_busy_loop(MAX_FPS)/1000
+            dt = clock.tick_busy_loop(MAX_FPS) / 1000
 
 
 ## LEVEL SCREEN
@@ -95,20 +98,24 @@ class Level:
         self.physspace = pymunk.Space()
         self.physspace.gravity = 0, 0
 
+        self.btn_accelerate = None
+        self.btn_decelerate = None
+        self.btn_left = None
+        self.btn_right = None
+
         self.world: pyscroll.BufferedRenderer = None
         self.load_map(map_name)
 
-
         self.body = pymunk.Body()
-        self.body.position = (80,550)
+        self.body.position = (80, 550)
         # Astronaut collision model
         poly = pymunk.Poly(self.body, [
             (38 - 64, 120 - 64),
-            (24 - 64, 66  - 64),
-            (30 - 64, 35  - 64),
-            (45 - 64, 9   - 64),
-            (72 - 64, 7   - 64),
-            (100- 64, 58  - 64),
+            (24 - 64, 66 - 64),
+            (30 - 64, 35 - 64),
+            (45 - 64, 9 - 64),
+            (72 - 64, 7 - 64),
+            (100 - 64, 58 - 64),
             (73 - 64, 120 - 64),
         ])
         poly.density = 0.005
@@ -118,7 +125,7 @@ class Level:
 
         # Test Asteroid
         asteroid = pymunk.Body()
-        asteroid.position = (320,450)
+        asteroid.position = (320, 450)
         c = pymunk.Circle(asteroid, 27)
         c.density = 0.1
         c.friction = 0.4
@@ -135,10 +142,10 @@ class Level:
             if "blocked" in props.keys():
                 if props["blocked"]:
                     block_body = pymunk.Body(body_type=pymunk.Body.STATIC)
-                    bb = pymunk.BB(x*tile_size_x,  # l
-                                   (y+1) * tile_size_y,  # b
-                                   (x+1) * tile_size_x,  # r
-                                   y*tile_size_y)  # t
+                    bb = pymunk.BB(x * tile_size_x,  # l
+                                   (y + 1) * tile_size_y,  # b
+                                   (x + 1) * tile_size_x,  # r
+                                   y * tile_size_y)  # t
                     block = pymunk.Poly.create_box(block_body, (tile_size_x, tile_size_y))
 
                     blocks.append(block_body)
@@ -150,15 +157,25 @@ class Level:
         self.map = load_pygame("assets/maps/" + map_id)
         self.map_data = pyscroll.TiledMapData(self.map)
         self.world = pyscroll.BufferedRenderer(self.map_data, self.get_screen_size())
-        self.world.zoom=2
-        self.world.scroll((0,300))
+        self.world.zoom = 2
+        self.world.scroll((0, 300))
+
+        # Loading buttons
+        btn = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_down.png")
+        self.btn_accelerate = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
+        btn = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_up.png")
+        self.btn_decelerate = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
+        btn = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_left.png")
+        self.btn_left = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
+        btn = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_right.png")
+        self.btn_right = pygame.transform.scale(btn, np.array(btn.get_size()) * 3)
 
         self.group = pyscroll.PyscrollGroup(map_layer=self.world)
 
     def update(self, dt):
         self.physspace.step(dt)
         self.group.update(dt)
-        #self.world.scroll((0, 1))
+        # self.world.scroll((0, 1))
         self.world.center(self.body.position)
 
     def render(self, surface):
@@ -172,15 +189,15 @@ class Level:
 
     def on_key_press(self, event):
         if event.key == pygame.K_DOWN:
-            self.body.apply_impulse_at_local_point((-2000,0), (0,0))
+            self.body.apply_impulse_at_local_point((-2000, 0), (0, 0))
         if event.key == pygame.K_UP:
-            self.body.apply_impulse_at_local_point((2000,0), (0,0))
+            self.body.apply_impulse_at_local_point((2000, 0), (0, 0))
         if event.key == pygame.K_LEFT:
-            self.body.apply_impulse_at_local_point((200,0), (30,60))
-            self.body.apply_impulse_at_local_point((-200,0), (-30,-60))
+            self.body.apply_impulse_at_local_point((200, 0), (30, 60))
+            self.body.apply_impulse_at_local_point((-200, 0), (-30, -60))
         if event.key == pygame.K_RIGHT:
-            self.body.apply_impulse_at_local_point((-200,0), (30,60))
-            self.body.apply_impulse_at_local_point((200,0), (-30,-60))
+            self.body.apply_impulse_at_local_point((-200, 0), (30, 60))
+            self.body.apply_impulse_at_local_point((200, 0), (-30, -60))
 
     def on_key_release(self, event):
         pass
@@ -192,7 +209,33 @@ class Level:
         pass
 
     def render_ui(self, screen):
-        pass
+        w, h = self.get_screen_size()
+        bw, bh = self.btn_right.get_size()
+
+        # Drawing conveyor background
+        pygame.draw.rect(screen, black, (self.get_button_x(0)-30, h-bh-30, self.get_button_x(4)-self.get_button_x(0)+60-8, h))
+
+        # Drawing debug target
+        pygame.draw.line(screen,(255,255,255),(0,h/2),(w,h/2))
+        pygame.draw.line(screen,(255,255,255),(w/2,0),(w/2,h))
+
+        # Drawing buttons
+        for i in range(4):
+            bx = self.get_button_x(i)
+            screen.blit(self.btn_right, (bx, h - bh))
+            hotkey_text = ui_font.render(str(i+1),False,(255,255,255))
+            screen.blit(hotkey_text,(bx+bw/2,h-bh-32))
+
+    def get_button_x(self, index):
+        w, h = self.get_screen_size()
+        bw, bh = self.btn_right.get_size()
+        button_offset = 4
+        bw = bw + button_offset*2
+
+        return (w / 2) - (bw*2) + (button_offset) + (bw * index)
+
+    def get_button_ui_width(self):
+        return self.get_button_x(1)-self.get_button_x(0)
 
     def on_screen_enter(self):
         pass
@@ -218,7 +261,7 @@ class Animation2D:
         super().__init__()
         self.vector_from = vector_from
         self.vector_to = vector_to
-        self.ticks = int(duration*1000)
+        self.ticks = int(duration * 1000)
         if isinstance(interpolation, Interpolation):
             self.interpolation_x = interpolation
             self.interpolation_y = interpolation
@@ -304,7 +347,7 @@ class Animation2D:
 
 
 class EntityRenderer(Sprite):
-    def __init__(self, image: pygame.Surface, physbody: pymunk.Body=None):
+    def __init__(self, image: pygame.Surface, physbody: pymunk.Body = None):
 
         super().__init__()
 
