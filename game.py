@@ -73,7 +73,7 @@ btn_right_img_disabled = pygame.transform.scale(btn_right_img_disabled, np.array
 
 class Game:
     def __init__(self, screen):
-        self.debug_font = pygame.font.Font(gmtk_font, 18)
+        self.debug_font = pygame.font.Font(gmtk_font, 25)
 
         self.current_screen: BaseLevel = None
         self.next_screen = None
@@ -107,6 +107,9 @@ class Game:
                 if event.type == pygame.KEYUP:
                     self.current_screen.on_key_release(event)
 
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    self.current_screen.on_mouse_release(event)
+
                 if event.type == pygame.VIDEORESIZE:
                     pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
                     pygame.display.set_caption("MORTAL CONGA (" + str(event.w) + "x" + str(event.h) + ")")
@@ -123,11 +126,14 @@ class Game:
             self.current_screen.render_ui(self.screen)
 
             # Showing debug messages
-            self.screen.blit(self.debug_font.render(str(clock.get_fps()), True, (255, 255, 255)), (5, 5))
+            fps_surface = self.debug_font.render('FPS: '+str(clock.get_fps()), True, (255, 255, 255))
+            fw, fh = fps_surface.get_size()
+            self.screen.blit(fps_surface, (5, 5))
+
             message_list = get_all_debug_messages()
             for i in range(len(message_list)):
                 msg = message_list[i]
-                self.screen.blit(self.debug_font.render(msg, True, (255, 255, 255)), (5, 15 + 15 * i))
+                self.screen.blit(self.debug_font.render(msg, True, (255, 255, 255)), (5, fh * (i+1)))
             debug_messages_apply_delta_time(dt)
 
             pygame.display.flip()
@@ -310,6 +316,15 @@ class BaseLevel:
         if self.signal_source is not None:
             pygame.draw.circle(surface, (0,180,0), self.world.translate_point(self.signal_source), self.signal_radius, width=2)
 
+    def on_mouse_release(self,event):
+        if any(pygame.mouse.get_pressed()):
+            mx, my = pygame.mouse.get_pos()
+            for i in range(len(self.active_button_queue)):
+                bt = self.active_button_queue[i]
+                if bt is not None:
+                    if bt.is_mouse_inside(mx,my):
+                        self.on_control_button_pressed(i)
+
     def on_resize(self):
         size = display.get_surface().get_size()
         view_center = self.world.view_rect.center
@@ -341,7 +356,7 @@ class BaseLevel:
     def on_control_button_pressed(self,index):
         bt = self.active_button_queue[index]
         if bt is None or not bt.active:
-            #display_debug_message('This action is not ready yet')
+            display_debug_message('This action is not ready yet')
             #TODO: Display message
             return
 
@@ -1126,6 +1141,8 @@ class ControlButton(AnimatedEntity):
 
         animation.add_animation_finished_callback(finished)
 
+    def is_mouse_inside(self,mx,my):
+        return self.rect.collidepoint(mx,my)
 
 class TextSprite(AnimatedEntity):
     def __init__(self, text, font=ui_font_48, *groups):
@@ -1166,7 +1183,7 @@ class TextSprite(AnimatedEntity):
 
 ### DEBUG MESSAGES
 _debug_message_list = []
-debug_message_default_time = 5000
+debug_message_default_time = 5
 
 
 def display_debug_message(msg: str, time=debug_message_default_time):
