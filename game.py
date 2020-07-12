@@ -620,8 +620,9 @@ class BaseLevel(Screen):
 
     def level_win(self):
         display_debug_message("A winner is you!")
-        t = TextSprite(["MISSION","ACCOMPLISHED"], ui_font_128, self.ui_group)
+        t = TextSprite(["MISSION","ACCOMPLISHED"], ui_font_128)
         t.set_sprite_position(self.get_screen_size()[0]//2, self.get_screen_size()[1]//2, center=True)
+        self.ui_group.add(t)
 
         for bt in self.active_button_queue:
             if bt is not None:
