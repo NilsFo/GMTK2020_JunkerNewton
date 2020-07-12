@@ -1273,7 +1273,11 @@ class GameOverScreen(Screen):
         self.bg_image = pygame.transform.smoothscale(black_hole_bg, self.get_screen_size())
 
     def on_key_release(self, event):
-        if self.quote_alpha > 0:
+        if self.quote_alpha > -0.5:
+            game.next_screen = self.reset_level(self.game)
+
+    def on_mouse_release(self,event):
+        if self.quote_alpha > -0.5:
             game.next_screen = self.reset_level(self.game)
 
     def get_screen_size(self):
