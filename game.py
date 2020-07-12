@@ -85,25 +85,49 @@ btn_right_img = pygame.image.load("assets" + os.sep + "textures" + os.sep + "but
 btn_right_img = pygame.transform.scale(btn_right_img, np.array(btn_right_img.get_size()) * 3)
 
 # LOADING DISABLED BUTTONS
-btn_accelerate_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_speedup3.png")
+btn_accelerate_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_speedup4.png")
 btn_accelerate_img_disabled = pygame.transform.scale(btn_accelerate_img_disabled, np.array(btn_accelerate_img_disabled.get_size()) * 3)
-btn_decelerate_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_speeddown3.png")
+btn_decelerate_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_speeddown4.png")
 btn_decelerate_img_disabled = pygame.transform.scale(btn_decelerate_img_disabled, np.array(btn_decelerate_img_disabled.get_size()) * 3)
-btn_left_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_left3.png")
+btn_left_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_left4.png")
 btn_left_img_disabled = pygame.transform.scale(btn_left_img_disabled, np.array(btn_left_img_disabled.get_size()) * 3)
-btn_right_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_right3.png")
+btn_right_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_right4.png")
 btn_right_img_disabled = pygame.transform.scale(btn_right_img_disabled, np.array(btn_right_img_disabled.get_size()) * 3)
 
-
-# LOADING DISABLED BUTTONS
-btn_accelerate_img_pressed = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_speedup2.png")
+# LOADING PRESSED BUTTONS
+btn_accelerate_img_pressed = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_speedup3.png")
 btn_accelerate_img_pressed = pygame.transform.scale(btn_accelerate_img_pressed, np.array(btn_accelerate_img_pressed.get_size()) * 3)
-btn_decelerate_img_pressed = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_speeddown2.png")
+btn_decelerate_img_pressed = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_speeddown3.png")
 btn_decelerate_img_pressed = pygame.transform.scale(btn_decelerate_img_pressed, np.array(btn_decelerate_img_pressed.get_size()) * 3)
-btn_left_img_pressed = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_left2.png")
+btn_left_img_pressed = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_left3.png")
 btn_left_img_pressed = pygame.transform.scale(btn_left_img_pressed, np.array(btn_left_img_pressed.get_size()) * 3)
-btn_right_img_pressed = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_right2.png")
+btn_right_img_pressed = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_right3.png")
 btn_right_img_pressed = pygame.transform.scale(btn_right_img_pressed, np.array(btn_right_img_pressed.get_size()) * 3)
+
+# LOADING PROGRESS BUTTONS
+btn_accelerate_img_progress = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_speedup2.png")
+btn_accelerate_img_progress = pygame.transform.scale(btn_accelerate_img_progress, np.array(btn_accelerate_img_progress.get_size()) * 3)
+btn_decelerate_img_progress = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_speeddown2.png")
+btn_decelerate_img_progress = pygame.transform.scale(btn_decelerate_img_progress, np.array(btn_decelerate_img_progress.get_size()) * 3)
+btn_left_img_progress = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_left2.png")
+btn_left_img_progress = pygame.transform.scale(btn_left_img_progress, np.array(btn_left_img_progress.get_size()) * 3)
+btn_right_img_progress = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_right2.png")
+btn_right_img_progress = pygame.transform.scale(btn_right_img_progress, np.array(btn_right_img_progress.get_size()) * 3)
+
+# LOADING GLOW BUTTONS
+btn_accelerate_img_glow = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "ButtonGlow1.png")
+btn_accelerate_img_glow = pygame.transform.scale(btn_accelerate_img_glow, np.array(btn_accelerate_img_glow.get_size()) * 3)
+btn_decelerate_img_glow = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "ButtonGlow2.png")
+btn_decelerate_img_glow = pygame.transform.scale(btn_decelerate_img_glow, np.array(btn_decelerate_img_glow.get_size()) * 3)
+btn_left_img_glow = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "ButtonGlow4.png")
+btn_left_img_glow = pygame.transform.scale(btn_left_img_glow, np.array(btn_left_img_glow.get_size()) * 3)
+btn_right_img_glow = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "ButtonGlow3.png")
+btn_right_img_glow = pygame.transform.scale(btn_right_img_glow, np.array(btn_right_img_glow.get_size()) * 3)
+
+btn_accelerate_img_glow.set_alpha(210)
+btn_decelerate_img_glow.set_alpha(210)
+btn_left_img_glow.set_alpha(210)
+btn_right_img_glow.set_alpha(210)
 
 # Credits
 f = open("assets/credits.txt",encoding='UTF-8')
@@ -127,7 +151,8 @@ mixer_bump_channel = pygame.mixer.Channel(1)
 dank_lore = ["It is the year 2187.",
              "Space is crawling with lost and wracked satellites and space junk.",
              "Some have made themselves salvagers of the future and sweep up the orbits.",
-             "Unfortunately, space is an unforgiving environment, wearing out equipment and posing obstacles at every turn.",
+             "An unforgiving environment and faulty equipment complicate making end's meet.",
+             #"Unfortunately, space is an unforgiving environment, wearing out equipment and posing obstacles at every turn.",
              "So grab a beer and wrack some junk."]
 
 class Game:
@@ -236,6 +261,7 @@ class Screen():
 
         self.delta_time = 0
         self.ups = 0
+        self.total_uptime = 0
 
         self.screen_shake_timer = 0
         self.screen_shake_magnitude = 0
@@ -253,6 +279,7 @@ class Screen():
 
     def update(self, dt):
         self.delta_time += dt
+        self.total_uptime += dt
         if self.delta_time > _update_time:
             self.update_fixed()
             self.delta_time -= _update_time
@@ -321,6 +348,7 @@ class Screen():
 
     def on_screen_enter(self):
         self.init_ui()
+        self.on_resize()
 
     def on_screen_exit(self):
         pass
@@ -551,6 +579,10 @@ class BaseLevel(Screen):
 
         self.win_trigger = pymunk.BB(10,10,200,200)
         self.level_won = False
+        self.show_glow = False
+
+        self.glow_timer_current = 0.0
+        self.glow_timer_target = 0.25
 
         self.active_button_queue = []
         self.waiting_button_queue = []
@@ -601,6 +633,10 @@ class BaseLevel(Screen):
         self.ordered_button_group.update(dt)
 
         self.level_time += dt
+        self.glow_timer_current+=dt
+        if self.glow_timer_current > self.glow_timer_target:
+            self.glow_timer_current=0
+            self.show_glow = not self.show_glow
 
 
         self.signal_source = self.get_signal_position()
@@ -745,27 +781,27 @@ class BaseLevel(Screen):
 
         mag = bt.magnitude
         if bt.type==3:
-            self.astronaut_backward(mag)
+            self.astronaut_turn_forward(mag)
         if bt.type==0:
             self.astronaut_forward(mag)
         if bt.type==1:
             self.astronaut_turn_backward(mag)
         if bt.type==2:
-            self.astronaut_turn_forward(mag)
+            self.astronaut_backward(mag)
         #self.set_screen_shake(1,5)
 
-        interpolator = interpolation.Smooth()
+        interpolator = interpolation.Smooth2()
         bt.animate(Animation2D((0,0),(200,200),2,interpolation=interpolator))
 
         bt.on_execute()
         #bt.stop_animations()
         #self.active_button_queue[index] = None
-        self.ordered_button_group.remove(bt)
+        #self.ordered_button_group.remove(bt)
 
         next_bt = self.waiting_button_queue.pop(0)
         distance_x= self.get_button_x(index) - next_bt.get_sprite_position_x()
         next_bt.stop_animations()
-        next_bt.animate(Animation2D((0,0),(distance_x,0),.5,interpolation=interpolator))
+        next_bt.animate(Animation2D((0,0),(distance_x,0),.5,))
         next_bt.countdown_dt = countdown_intervals[index]
         self.active_button_queue[index] = next_bt
 
@@ -778,7 +814,7 @@ class BaseLevel(Screen):
             target_x = self.get_button_x(i+4)
             distance_x= target_x - current_x
             bt.stop_animations()
-            bt.animate(Animation2D((0,0),(distance_x,0),.5))
+            bt.animate(Animation2D((0,0),(distance_x,0),.5,interpolation=interpolator))
 
 
     def get_current_astronaut_image(self):
@@ -903,9 +939,20 @@ class BaseLevel(Screen):
                 p = float(bt.get_countdown_progress())
             pygame.draw.rect(screen,(255,0,0),(progressbar_x,h-bh-60,int(progressbar_w*p),36))
 
-
-        # Drawing conveyor background
+        # Drawing button holding background
         screen.blit(self.button_bg,(w/2-128*3, h-72*3))
+
+        # Drawing button glow
+        if self.show_glow:
+            for i in range(len(self.active_button_queue)):
+                bt = self.active_button_queue[i]
+                if bt is not None:
+                    if bt.get_countdown_progress() > .75:
+                        glow = bt.get_glow_sprite()
+                        btx = bt.get_sprite_position_x()
+                        bty = bt.get_sprite_position_y()
+
+                        screen.blit(glow,(btx-12,bty-12))
 
         # Drawing hotkeys
         for i in range(4):
@@ -1647,6 +1694,9 @@ class ControlButton(AnimatedEntity):
         self.magnitude =magnitude
         self.active = active
         self.expired = False
+        self.pressed_mode = False
+        self.pressed_timer_current = 0
+        self.pressed_timer_target = 0.15
 
         w,h = level.get_screen_size()
 
@@ -1664,35 +1714,78 @@ class ControlButton(AnimatedEntity):
 
     def update_sprite(self):
         if self.active:
+            base=None
             if self.type==0:
-                self.image=btn_decelerate_img
+                base =btn_accelerate_img
+                progres =btn_accelerate_img_progress
             if self.type==1:
-                self.image=btn_left_img
+                base =btn_left_img
+                progres =btn_left_img_progress
             if self.type==2:
-                self.image=btn_right_img
+                base =btn_decelerate_img
+                progres =btn_decelerate_img_progress
             if self.type==3:
-                self.image=btn_accelerate_img
+                base =btn_right_img
+                progres =btn_right_img_progress
+            w,h = base.get_size()
+            p = min(self.get_countdown_progress(),1.0)
+            p = int(h*p)
+            new_surface = base
+
+            if p != 0:
+                subsurface = progres.subsurface((0, 0, w, p))
+                new_surface = base.copy()
+                new_surface.blit(subsurface,(0,0))
+
+            self.image = new_surface
         else:
             if self.type==0:
-                self.image=btn_decelerate_img_disabled
+                self.image=btn_accelerate_img_disabled
             if self.type==1:
                 self.image=btn_left_img_disabled
             if self.type==2:
-                self.image=btn_right_img_disabled
+                self.image=btn_decelerate_img_disabled
             if self.type==3:
-                self.image=btn_accelerate_img_disabled
+                self.image=btn_right_img_disabled
+        if self.pressed_mode:
+            if self.type==0:
+                self.image=btn_accelerate_img_pressed
+            if self.type==1:
+                self.image=btn_left_img_pressed
+            if self.type==2:
+                self.image=btn_decelerate_img_pressed
+            if self.type==3:
+                self.image=btn_right_img_pressed
 
     def on_execute(self):
-        pass
+        self.pressed_mode=True
+        self.update_sprite()
 
     def update(self, dt):
         super().update(dt)
 
         if self.active and self.level.level_won is not True:
             self.countdown_current += dt
+            self.update_sprite()
 
         if self.countdown_current >= self.countdown_dt:
             self.expired = True
+
+        if self.pressed_mode == True:
+            self.pressed_timer_current+=dt
+
+        if self.pressed_timer_current >= self.pressed_timer_target:
+            self.remove(self.level.ordered_button_group)
+
+    def get_glow_sprite(self):
+        if self.type==0:
+            return btn_accelerate_img_glow
+        if self.type==1:
+            return btn_left_img_glow
+        if self.type==2:
+            return btn_decelerate_img_glow
+        if self.type==3:
+            return btn_right_img_glow
 
     def get_countdown_progress(self):
         return float(self.countdown_current) / float(self.countdown_dt)
