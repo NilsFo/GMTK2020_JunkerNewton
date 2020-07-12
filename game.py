@@ -70,6 +70,18 @@ btn_left_img_disabled = pygame.transform.scale(btn_left_img_disabled, np.array(b
 btn_right_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_right2.png")
 btn_right_img_disabled = pygame.transform.scale(btn_right_img_disabled, np.array(btn_right_img_disabled.get_size()) * 3)
 
+pygame.mixer.init()
+snd_bump_light = pygame.mixer.Sound("assets/sounds/bump_light.wav")
+snd_bump_hard = pygame.mixer.Sound("assets/sounds/bump_hard.wav")
+snd_bump_light.set_volume(0.3)
+snd_bump_hard.set_volume(0.3)
+snd_jet1 = pygame.mixer.Sound("assets/sounds/jet1_wet.wav")
+snd_jet2 = pygame.mixer.Sound("assets/sounds/jet2_wet.wav")
+snd_jet1.set_volume(0.2)
+snd_jet2.set_volume(0.2)
+
+pygame.mixer.set_num_channels(2)
+mixer_bump_channel = pygame.mixer.Channel(1)
 
 class Game:
     def __init__(self, screen):
@@ -228,6 +240,17 @@ class BaseLevel:
             block_body.position = bb.center()
             blocks.append(block)
         self.physspace.add(*blocks)
+
+        def collision(arbiter: pymunk.Arbiter, space, data):
+            if arbiter.total_ke > 100000:
+                if not mixer_bump_channel.get_busy():
+                    mixer_bump_channel.play(snd_bump_hard)
+            elif arbiter.total_ke > 20000:
+                if not mixer_bump_channel.get_busy():
+                    mixer_bump_channel.play(snd_bump_light)
+
+        handler = self.physspace.add_collision_handler(collision_types["astronaut"], collision_types["object"])
+        handler.post_solve = collision
 
         self.win_trigger = pymunk.BB(10,10,200,200)
         self.level_won = False
@@ -415,23 +438,27 @@ class BaseLevel:
         self.astronaut.apply_impulse_at_local_point((2000*magnitude,0), (0,0))
         self.last_input = 1
         self.sprite_timer = 0
+        snd_jet1.play()
 
     def astronaut_backward(self, magnitude=1):
         self.astronaut.apply_impulse_at_local_point((-2000*magnitude,0), (0,0))
         self.last_input = 2
         self.sprite_timer = 0
+        snd_jet1.play()
 
     def astronaut_turn_forward(self, magnitude=1):
         self.astronaut.apply_impulse_at_local_point((-200*magnitude,0), (30,60))
         self.astronaut.apply_impulse_at_local_point((200*magnitude,0), (-30,-60))
         self.last_input = 3
         self.sprite_timer = 0
+        snd_jet2.play()
 
     def astronaut_turn_backward(self, magnitude=1):
         self.astronaut.apply_impulse_at_local_point((200*magnitude,0), (30,60))
         self.astronaut.apply_impulse_at_local_point((-200*magnitude,0), (-30,-60))
         self.last_input = 4
         self.sprite_timer = 0
+        snd_jet2.play()
 
     def align_ui_buttons(self):
         w,h = self.get_screen_size()
