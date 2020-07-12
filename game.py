@@ -52,6 +52,8 @@ ui_font_128 = pygame.font.Font(gmtk_font, 128)
 
 ## ASSETS
 mm_background = pygame.image.load("assets/background/background.png").convert()
+mm_cat = pygame.image.load("assets/background/mm_cat.png")
+mm_astronaut = pygame.image.load("assets/background/mm_astronaut.png")
 black_hole_bg = pygame.image.load("assets/textures/bh_visualization.jpg")
 img_astronaut = pygame.image.load("assets/textures/astronaut/astronaut.png")
 img_astronaut_sat = pygame.image.load("assets/textures/astronaut/astronaut-sat.png")
@@ -426,6 +428,9 @@ class MainMenuScreen(Screen):
         self.btn_story = None
         self.btn_select = None
         self.btn_continue = None
+        self.catsprite = mm_cat
+        self.astronautsprite = mm_astronaut
+        self.spriteanim_timer = 0
         self.credit_lines = []
 
         for line in credits:
@@ -444,6 +449,8 @@ class MainMenuScreen(Screen):
             y=h/2-mh/2
 
         screen.blit(mm_background,(x,y))
+        screen.blit(self.astronautsprite, (706,778+int(10*math.sin(self.spriteanim_timer))))
+        screen.blit(self.catsprite, (897,763+10*math.cos(self.spriteanim_timer)))
 
     def on_game_startup(self):
         display_debug_message("Welcome to JUNKER NEWTON! THANKS FOR PLAYING!",time=20)
@@ -478,6 +485,10 @@ class MainMenuScreen(Screen):
                 relative_rect=pygame.Rect((screen_w - 225, 250), (160, 90)),
                 text='Continue',
                 manager=manager)
+
+    def update(self, dt):
+        super().update(dt)
+        self.spriteanim_timer+=dt
 
     def on_ui_input_event(self, event, source):
         super().on_ui_input_event(event, source)
@@ -1327,7 +1338,7 @@ class Level5(BaseLevel):
         return self.satellite.position if not self.astronaut_state["has_sat"] else None
 
     def get_level_name(self):
-        return ["Stays in Motion...",5]
+        return ["...Stays in Motion",5]
 
 class Level6(BaseLevel):
     def __init__(self, game):
