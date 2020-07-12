@@ -566,7 +566,7 @@ class BaseLevel(Screen):
 
         def collision(arbiter: pymunk.Arbiter, space, data):
             if arbiter.total_ke > 100000:
-                self.set_screen_shake(duration_dt=.5, magnitude=4)
+                self.set_screen_shake(duration_dt=.5, magnitude=2)
                 if not mixer_bump_channel.get_busy():
                     mixer_bump_channel.play(snd_bump_hard)
             elif arbiter.total_ke > 20000:
@@ -661,7 +661,7 @@ class BaseLevel(Screen):
             if bt.expired:
                 display_debug_message('Button expired!')
                 self.on_control_button_pressed(i)
-                self.set_screen_shake(duration_dt=1, magnitude=2)
+                self.set_screen_shake(duration_dt=.5, magnitude=1)
 
         if self.check_win_condition() and not self.level_won:
             self.level_won = True
@@ -1097,7 +1097,7 @@ class Level1(BaseLevel):
         handler.pre_solve = self.collect
 
     def get_level_name(self):
-        return ['An Object in Motion...',1]
+        return ['Standard Retrieval Procedure',1]
 
     def check_win_condition(self):
         return super().check_win_condition() and self.astronaut_state["has_sat"]
@@ -1135,7 +1135,7 @@ class Level2(BaseLevel):
         handler.pre_solve = self.collect
 
     def get_level_name(self):
-        return ['Nils ist cool',2]
+        return ["Angular Velocity",2]
 
     def check_win_condition(self):
         return super().check_win_condition() and self.astronaut_state["has_sat"]
@@ -1180,6 +1180,9 @@ class Level3(BaseLevel):
     def get_signal_position(self):
         return self.satellite.position if not self.astronaut_state["has_sat"] else None
 
+    def get_level_name(self):
+        return ["Deconstruction",3]
+
 class Level4(BaseLevel):
     def __init__(self, game):
         super().__init__(game, map_name="level4.tmx")
@@ -1215,6 +1218,9 @@ class Level4(BaseLevel):
 
     def get_signal_position(self):
         return self.satellite.position if not self.astronaut_state["has_sat"] else None
+
+    def get_level_name(self):
+        return ["An Object in Motion...",4]
 
 class Level5(BaseLevel):
     def __init__(self, game):
@@ -1253,6 +1259,9 @@ class Level5(BaseLevel):
     def get_signal_position(self):
         return self.satellite.position if not self.astronaut_state["has_sat"] else None
 
+    def get_level_name(self):
+        return ["Stays in Motion...",5]
+
 class Level6(BaseLevel):
     def __init__(self, game):
         super().__init__(game, map_name="level6.tmx")
@@ -1285,7 +1294,7 @@ class Level6(BaseLevel):
         handler.pre_solve = self.collect
 
     def get_level_name(self):
-        return ['Levelllllllll',3]
+        return ['Retroactive Thrust',6]
 
     def check_win_condition(self):
         return super().check_win_condition() and self.astronaut_state["has_sat"]
