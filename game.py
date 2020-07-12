@@ -683,6 +683,13 @@ class BaseLevel(Screen):
             bt = self.active_button_queue[i]
             if bt.expired:
                 display_debug_message('Button expired!')
+                #if bt.type == 1 or bt.type == 3:
+                #    # Expired turn buttons get three times the magnitude
+                #    bt.magnitude = 3
+                #else:
+                #    # Other two get 1.5 times the magnitude
+                #    bt.magnitude = 1.5
+
                 self.on_control_button_pressed(i)
                 self.set_screen_shake(duration_dt=.5, magnitude=1)
 
