@@ -5,12 +5,11 @@ A physical adventure through space
 ## Dependencies
 
 - Python 3.6
-- pygame 2.0.0
+- pygame 2.0.0.dev10
 - pytmx
 - pyscroll
 - pymunk
 
-`pip install pygame==2.0.0.dev10 pytmx pyscroll pymunk pygame_gui`
 
 ## Build
 

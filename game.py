@@ -928,7 +928,7 @@ class Level1(BaseLevel):
 
         self.satellite, c = create_satellite_body(self.worldgroup, position=(27 * 32, 17 * 32))
         self.physspace.add(self.satellite, c)
-        self.physspace.add(create_asteroid_body(self.worldgroup, position=(26*32,7*32), velocity=(-1.,0.1)))
+        self.physspace.add(create_asteroid_body(self.worldgroup, position=(21*32,11*32), velocity=(-1.,0.1)))
 
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(16*32,16*32), velocity=(.3,.1), rotation=-0.7, angular_velocity=0.7))
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(16.8*32,16.2*32), velocity=(.1,-.1), rotation=1.5, angular_velocity=-0.2))
@@ -964,7 +964,6 @@ class Level1(BaseLevel):
     def get_signal_position(self):
         return self.satellite.position if not self.astronaut_state["has_sat"] else None
 
-
 class Level2(BaseLevel):
     def __init__(self, game):
         super().__init__(game, map_name="level2.tmx")
@@ -977,7 +976,8 @@ class Level2(BaseLevel):
 
         self.satellite, c = create_satellite_body(self.worldgroup, position=(25.8*32,24*32))
         self.physspace.add(self.satellite, c)
-        self.physspace.add(create_asteroid_body(self.worldgroup, position=(26*32,7*32), velocity=(-1.,0.1)))
+        self.physspace.add(create_asteroid_body(self.worldgroup, position=(26*32,5*32), velocity=(0,25)))
+        self.physspace.add(create_asteroid_body(self.worldgroup, position=(28*32, 3*32), velocity=(0, 10)))
 
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(22*32,16*32), velocity=(.3,.1), rotation=-0.7, angular_velocity=0.7))
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(23.8*32,16.2*32), velocity=(.1,-.1), rotation=1.5, angular_velocity=-0.2))
@@ -1017,22 +1017,178 @@ class Level3(BaseLevel):
     def __init__(self, game):
         super().__init__(game, map_name="level3.tmx")
 
-        self.next_level = None
+        self.next_level = Level4
 
         self.astronaut.position = (13*32, 14*32)
         self.astronaut_state["has_sat"] = False
 
-        self.satellite, c = create_satellite_body(self.worldgroup, position=(24*32,9*32))
+        self.satellite, c = create_satellite_body(self.worldgroup, position=(8*32,4*32))
         self.physspace.add(self.satellite, c)
-        self.physspace.add(create_asteroid_body(self.worldgroup, position=(19*32,14*32)))
+        self.physspace.add(create_asteroid_body(self.worldgroup, position=(24*32,4*32)))
 
-        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(16*32,16*32), velocity=(.3,.1), angular_velocity=0.7))
-        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(16.8*32,16.2*32), velocity=(.1,-.1), angular_velocity=-0.2))
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(17*32,13*32), velocity=(.3,.1), angular_velocity=0.7))
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(17*32,14*32), velocity=(.1,-.1), angular_velocity=-0.2))
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(17*32,15*32), velocity=(.5, -.1),angular_velocity=0.5))
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(17*32,16*32), velocity=(-.5,-.1),angular_velocity=-0.57))
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(17*32,17*32), velocity=(-.7,-.1),angular_velocity=0.2))
         self.physspace.add(create_clutter_body(self.worldgroup, "wrench", position=(15*32,14*32)))
+        self.physspace.add(create_clutter_body(self.worldgroup, "wrench", position=(16*32,5*32)))
         self.physspace.add(create_clutter_body(self.worldgroup, "can", position=(19.5*32,17.2*32)))
-        self.physspace.add(create_clutter_body(self.worldgroup, "cat", position=(26*32,12*32), velocity=(-0.7, 0.1), angular_velocity=0.2))
+        self.physspace.add(create_clutter_body(self.worldgroup, "can", position=(23.5*32,8*32)))
+        self.physspace.add(create_clutter_body(self.worldgroup, "cat", position=(28*32,12*32), velocity=(-0.7, 0.1), angular_velocity=0.2))
 
 
+        self.win_trigger = pymunk.BB(10*32,12*32,16*32,18*32)
+
+        def collect(arbiter, space, data):
+            collectible = arbiter.shapes[1]
+            space.remove(collectible, collectible.body)
+            associated_sprites = filter(lambda s: collectible in s.physbody.shapes, self.worldgroup.sprites())
+            self.worldgroup.remove(*associated_sprites)
+            self.astronaut_state["has_sat"] = True
+            print(self.astronaut_state)
+
+            self.astronaut_sprite_normal = img_astronaut_sat
+            self.astronaut_sprite_tf = img_astronaut_tf_sat
+            self.astronaut_sprite_tr = img_astronaut_tr_sat
+            self.astronaut_sprite_tb = img_astronaut_tb_sat
+            self.astronaut_sprite_tl = img_astronaut_tl_sat
+            return False
+
+        handler = self.physspace.add_collision_handler(collision_types["astronaut"], collision_types["collectible"])
+        handler.pre_solve = collect
+
+    def check_win_condition(self):
+        return super().check_win_condition() and self.astronaut_state["has_sat"]
+
+    def get_signal_position(self):
+        return self.satellite.position if not self.astronaut_state["has_sat"] else None
+
+class Level4(BaseLevel):
+    def __init__(self, game):
+        super().__init__(game, map_name="level4.tmx")
+
+        self.astronaut.position = (13*32, 14.5*32)
+        self.astronaut.angle = 0.15
+        self.astronaut_state["has_sat"] = False
+
+        self.next_level = Level5
+
+        self.satellite, c = create_satellite_body(self.worldgroup, position=(35*32,15*32))
+        self.physspace.add(self.satellite, c)
+        self.physspace.add(create_asteroid_body(self.worldgroup, position=(25*32,19*32), velocity=(0,0.5)))
+        self.physspace.add(create_asteroid_body(self.worldgroup, position=(36*32,11*32), velocity=(-20,15)))
+        self.physspace.add(create_asteroid_body(self.worldgroup, position=(19*32,7*32), velocity=(22, 30)))
+
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(22*32,16*32), velocity=(.3,.1), rotation=-0.7, angular_velocity=0.7))
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(23.8*32,16.2*32), velocity=(.1,-.1), rotation=1.5, angular_velocity=-0.2))
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(19.7*32,17.5*32), velocity=(.05,.1), rotation=2.3, angular_velocity=-0.1))
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(16.1*32,18.*32), velocity=(0,-.1), rotation=0.5, angular_velocity=-0.1))
+        self.physspace.add(create_clutter_body(self.worldgroup, "wrench", position=(30*32,18*32), velocity=(-10,-5)))
+        self.physspace.add(create_clutter_body(self.worldgroup, "can", position=(23.5*32,14.2*32)))
+        self.physspace.add(create_clutter_body(self.worldgroup, "platine", position=(15.8*32,9.8*32), velocity=(0,0), angular_velocity=0))
+        self.physspace.add(create_clutter_body(self.worldgroup, "cat", position=(30.5*32,21.5*32), velocity=(-0.7, 0.1), angular_velocity=0.0))
+        self.win_trigger = pymunk.BB(10*32,12*32,16*32,18*32)
+
+        def collect(arbiter, space, data):
+            collectible = arbiter.shapes[1]
+            space.remove(collectible, collectible.body)
+            associated_sprites = filter(lambda s: collectible in s.physbody.shapes, self.worldgroup.sprites())
+            self.worldgroup.remove(*associated_sprites)
+            self.astronaut_state["has_sat"] = True
+            print(self.astronaut_state)
+
+            self.astronaut_sprite_normal = img_astronaut_sat
+            self.astronaut_sprite_tf = img_astronaut_tf_sat
+            self.astronaut_sprite_tr = img_astronaut_tr_sat
+            self.astronaut_sprite_tb = img_astronaut_tb_sat
+            self.astronaut_sprite_tl = img_astronaut_tl_sat
+            return False
+
+        handler = self.physspace.add_collision_handler(collision_types["astronaut"], collision_types["collectible"])
+        handler.pre_solve = collect
+
+    def check_win_condition(self):
+        return super().check_win_condition() and self.astronaut_state["has_sat"]
+
+    def get_signal_position(self):
+        return self.satellite.position if not self.astronaut_state["has_sat"] else None
+
+class Level5(BaseLevel):
+    def __init__(self, game):
+        super().__init__(game, map_name="level5.tmx")
+
+        self.astronaut.position = (23*32, 15*32)
+        self.astronaut.angle = 0.15
+        self.astronaut_state["has_sat"] = False
+
+        self.next_level = Level6
+
+        self.satellite, c = create_satellite_body(self.worldgroup, position=(9*32,13.5*32))
+        self.physspace.add(self.satellite, c)
+        self.physspace.add(create_asteroid_body(self.worldgroup, position=(5*32,26*32), velocity=(20,0)))
+        self.physspace.add(create_asteroid_body(self.worldgroup, position=(15*32,26*32), velocity=(0,0)))
+        self.physspace.add(create_asteroid_body(self.worldgroup, position=(24*32,26*32), velocity=(0,0)))
+
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(30*32,11*32), velocity=(.3,.1), rotation=-0.7, angular_velocity=0.7))
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(26*32,6*32), velocity=(.1,-.1), rotation=2.5, angular_velocity=-0.2))
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(20*32,5*32), velocity=(.05,.1), rotation=2.3, angular_velocity=-0.1))
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(16.1*32,18.*32), velocity=(0,-.1), rotation=0.5, angular_velocity=-0.1))
+        self.physspace.add(create_clutter_body(self.worldgroup, "wrench", position=(30*32,18*32), velocity=(-10,-5)))
+        self.physspace.add(create_clutter_body(self.worldgroup, "can", position=(24*32,23*32)))
+        self.physspace.add(create_clutter_body(self.worldgroup, "platine", position=(3*32,13*32), velocity=(0,0), angular_velocity=0))
+        self.physspace.add(create_clutter_body(self.worldgroup, "cat", position=(17*32,5*32), velocity=(0, 0), angular_velocity=2))
+        self.win_trigger = pymunk.BB(20*32,12*32,26*32,18*32)
+
+        def collect(arbiter, space, data):
+            collectible = arbiter.shapes[1]
+            space.remove(collectible, collectible.body)
+            associated_sprites = filter(lambda s: collectible in s.physbody.shapes, self.worldgroup.sprites())
+            self.worldgroup.remove(*associated_sprites)
+            self.astronaut_state["has_sat"] = True
+            print(self.astronaut_state)
+
+            self.astronaut_sprite_normal = img_astronaut_sat
+            self.astronaut_sprite_tf = img_astronaut_tf_sat
+            self.astronaut_sprite_tr = img_astronaut_tr_sat
+            self.astronaut_sprite_tb = img_astronaut_tb_sat
+            self.astronaut_sprite_tl = img_astronaut_tl_sat
+            return False
+
+        handler = self.physspace.add_collision_handler(collision_types["astronaut"], collision_types["collectible"])
+        handler.pre_solve = collect
+
+    def check_win_condition(self):
+        return super().check_win_condition() and self.astronaut_state["has_sat"]
+
+    def get_signal_position(self):
+        return self.satellite.position if not self.astronaut_state["has_sat"] else None
+
+class Level6(BaseLevel):
+    def __init__(self, game):
+        super().__init__(game, map_name="level6.tmx")
+
+        self.astronaut.position = (13*32, 14.5*32)
+        self.astronaut.angle = 0.15
+        self.astronaut_state["has_sat"] = False
+
+        self.next_level = None
+
+        self.satellite, c = create_satellite_body(self.worldgroup, position=(35*32,15*32))
+        self.physspace.add(self.satellite, c)
+        self.physspace.add(create_asteroid_body(self.worldgroup, position=(37*32,2*32), velocity=(-45,50)))
+        self.physspace.add(create_asteroid_body(self.worldgroup, position=(26*32,26*32), velocity=(0, -30)))
+        self.physspace.add(create_asteroid_body(self.worldgroup, position=(15* 32,5*32), velocity=(30, 30)))
+        self.physspace.add(create_asteroid_body(self.worldgroup, position=(31*32,15*32), velocity=(-10, 0)))
+
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(22*32,16*32), velocity=(.3,.1), rotation=-0.7, angular_velocity=0.7))
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(30.8*32,16.2*32), velocity=(.1,-.1), rotation=1.5, angular_velocity=-0.2))
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(15.7*32,15.5*32), velocity=(.05,.1), rotation=2.3, angular_velocity=-0.1))
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(16.1*32,18.*32), velocity=(0,-.1), rotation=0.5, angular_velocity=-0.1))
+        self.physspace.add(create_clutter_body(self.worldgroup, "wrench", position=(25.9*32,19*32)))
+        self.physspace.add(create_clutter_body(self.worldgroup, "can", position=(23.5*32,14.2*32)))
+        self.physspace.add(create_clutter_body(self.worldgroup, "platine", position=(15.8*32,9.8*32), velocity=(0,0), angular_velocity=0))
+        self.physspace.add(create_clutter_body(self.worldgroup, "cat", position=(20*32,8*32), velocity=(0, 20), angular_velocity=0.5))
         self.win_trigger = pymunk.BB(10*32,12*32,16*32,18*32)
 
         def collect(arbiter, space, data):
