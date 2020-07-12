@@ -435,7 +435,7 @@ class MainMenuScreen(Screen):
         print("A user input was made")
 
         if source == self.btn_story:
-            self.game.next_screen = TransitionScreen(self.game,Level0(self.game))
+            self.game.next_screen = TransitionScreen(self.game,Level5(self.game))
 
         if source == self.btn_select:
             self.game.next_screen = Level0(self.game)
@@ -1208,7 +1208,7 @@ class Level5(BaseLevel):
 
         self.next_level = Level6
 
-        self.satellite, c = create_satellite_body(self.worldgroup, position=(35*32,15*32))
+        self.satellite, c = create_satellite_body(self.worldgroup, position=(44*32,15*32))
         self.physspace.add(self.satellite, c)
         self.physspace.add(create_asteroid_body(self.worldgroup, position=(37*32,2*32), velocity=(-45,50)))
         self.physspace.add(create_asteroid_body(self.worldgroup, position=(26*32,26*32), velocity=(0, -30)))
