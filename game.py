@@ -475,7 +475,7 @@ class MainMenuScreen(Screen):
         print("A user input was made")
 
         if source == self.btn_story:
-            self.game.next_screen = TransitionScreen(self.game,Level5(self.game))
+            self.game.next_screen = TransitionScreen(self.game,Level0(self.game))
 
         if source == self.btn_select:
             self.game.next_screen = Level0(self.game)
@@ -1054,14 +1054,20 @@ class Level0(BaseLevel):
         self.satellite, c = create_satellite_body(self.worldgroup, position=(20 * 32, 5 * 32))
         self.physspace.add(self.satellite, c)
         self.physspace.add(create_asteroid_body(self.worldgroup, position=(33*32,5*32), velocity=(-1.,0.1)))
+        self.physspace.add(create_asteroid_body(self.worldgroup, position=(38*32,27*32), velocity=(0, -5)))
 
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(20*32,20*32), velocity=(.3,.1), rotation=-0.7, angular_velocity=0.7))
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(18.8*32,20.2*32), velocity=(.1,-.1), rotation=1.5, angular_velocity=-0.2))
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(16.7*32,22.5*32), velocity=(.05,.1), rotation=2.3, angular_velocity=-0.1))
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(14.1*32,5*32), velocity=(0,-.1), rotation=0.5, angular_velocity=-0.1))
+        self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(7*32,3*32), velocity=(-5, 5), rotation=0.5,angular_velocity=-0.1))
+        self.physspace.add(create_clutter_body(self.worldgroup, "sixpack", position=(26*32,12*32), velocity=(-5,0), rotation=0.5,angular_velocity=-0.1))
+        self.physspace.add(create_clutter_body(self.worldgroup, "crate", position=(2*32,8*32), velocity=(5, -5), rotation=0.5,angular_velocity=-0.1))
         self.physspace.add(create_clutter_body(self.worldgroup, "wrench", position=(32.9*32,13*32)))
+        self.physspace.add(create_clutter_body(self.worldgroup, "wrench", position=(19*32,28*32), velocity=(10,-5)))
         self.physspace.add(create_clutter_body(self.worldgroup, "can", position=(23.5*32,14.2*32)))
         self.physspace.add(create_clutter_body(self.worldgroup, "platine", position=(15.8*32,9.8*32), velocity=(0,0), angular_velocity=0))
+        self.physspace.add(create_clutter_body(self.worldgroup, "platine", position=(28*32,0.5*32), velocity=(0, 0),angular_velocity=0))
         self.physspace.add(create_clutter_body(self.worldgroup, "cat", position=(33*32,22*32), velocity=(-0.7, 0.1), angular_velocity=0.0))
         self.win_trigger = pymunk.BB(15*32,17*32,21*32,23*32)
         self.satellite_base.set_sprite_position(17*32,17*32-1)
