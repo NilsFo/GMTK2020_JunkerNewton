@@ -50,7 +50,7 @@ ui_font_72 = pygame.font.Font(gmtk_font, 72)
 ui_font_128 = pygame.font.Font(gmtk_font, 128)
 
 ## ASSETS
-mm_background = pygame.image.load("assets/background/background.jpg")
+mm_background = pygame.image.load("assets/background/background.png").convert()
 black_hole_bg = pygame.image.load("assets/textures/bh_visualization.jpg")
 img_astronaut = pygame.image.load("assets/textures/astronaut/astronaut.png")
 img_astronaut_sat = pygame.image.load("assets/textures/astronaut/astronaut-sat.png")
@@ -252,6 +252,7 @@ class Screen():
 
     def postprocess_render(self, screen):
         # This should not be overwritten, but if you do, please call the super()
+
         if (self.camera_offset_x != 0 or self.camera_offset_y != 0) and self.camera_zoom == 1:
             orig_screen = screen.copy()
             screen.fill((0, 0, 0))
@@ -540,6 +541,7 @@ class BaseLevel(Screen):
 
         self.level_time += dt
 
+
         self.signal_source = self.get_signal_position()
         if self.signal_source is not None:
             self.signal_radius += 1000*dt
@@ -548,6 +550,9 @@ class BaseLevel(Screen):
 
         # self.world.scroll((0, 1))
         self.world.center(self.astronaut.position)
+
+        if self.is_screen_shaking():
+            self.world.scroll((self.shake_offset_x, self.shake_offset_y))
 
         # Set correct sprite
         self.sprite_timer += dt
@@ -576,7 +581,7 @@ class BaseLevel(Screen):
 
     def level_win(self):
         display_debug_message("A winner is you!")
-        t = TextSprite("MISSION ACCOMPLISHED", ui_font_128, self.ui_group)
+        t = TextSprite(["MISSION","ACCOMPLISHED"], ui_font_128, self.ui_group)
         t.set_sprite_position(self.get_screen_size()[0]//2, self.get_screen_size()[1]//2, center=True)
 
         for bt in self.active_button_queue:
@@ -597,6 +602,9 @@ class BaseLevel(Screen):
         # draw signal
         if self.signal_source is not None:
             pygame.draw.circle(surface, (0,180,0), self.world.translate_point(self.signal_source), self.signal_radius, width=2)
+
+    def postprocess_render(self, screen):
+        pass
 
     def on_mouse_release(self,event):
         if any(pygame.mouse.get_pressed()):
