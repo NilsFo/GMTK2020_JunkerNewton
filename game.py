@@ -1200,7 +1200,7 @@ class Level4(BaseLevel):
 
 class Level5(BaseLevel):
     def __init__(self, game):
-        super().__init__(game, map_name="level6.tmx")
+        super().__init__(game, map_name="level5.tmx")
 
         self.astronaut.position = (13*32, 14.5*32)
         self.astronaut.angle = 0.15
