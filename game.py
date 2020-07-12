@@ -64,6 +64,13 @@ img_astronaut_tl_sat = pygame.image.load("assets/textures/astronaut/astronaut-tl
 img_astronaut_tr = pygame.image.load("assets/textures/astronaut/astronaut-tr.png")
 img_astronaut_tr_sat = pygame.image.load("assets/textures/astronaut/astronaut-tr-sat.png")
 
+img_meteor = pygame.image.load("assets/textures/meteor.png")
+img_beer = pygame.image.load("assets/textures/beer.png")
+img_wrench = pygame.image.load("assets/textures/wrench.png")
+img_platine = pygame.image.load("assets/textures/platine.png")
+img_can = pygame.image.load("assets/textures/can.png")
+img_cat = pygame.image.load("assets/textures/spacecat.png")
+
 # LOADING ACTIVE BUTTONS
 btn_accelerate_img = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_speedup1.png")
 btn_accelerate_img = pygame.transform.scale(btn_accelerate_img, np.array(btn_accelerate_img.get_size()) * 3)
@@ -903,7 +910,7 @@ def create_asteroid_body(group, position=(0,0), velocity=(0,0), angular_velocity
     c.friction = 0.4
     asteroid.angular_velocity = angular_velocity
     asteroid.velocity = velocity
-    EntityRenderer(pygame.image.load("assets/textures/meteor.png"), physbody=asteroid).add(group)
+    EntityRenderer(img_meteor, physbody=asteroid).add(group)
     return asteroid, c
 
 
@@ -911,15 +918,15 @@ def create_clutter_body(group, clutter_type="beer", position=(0,0), rotation=0.0
     clutter = pymunk.Body()
     clutter.position = position
     if clutter_type == "beer":
-        img = pygame.image.load("assets/textures/beer.png")
+        img = img_beer
     elif clutter_type == "wrench":
-        img = pygame.image.load("assets/textures/wrench.png")
+        img = img_wrench
     elif clutter_type == "platine":
-        img = pygame.image.load("assets/textures/platine.png")
+        img = img_platine
     elif clutter_type == "can":
-        img = pygame.image.load("assets/textures/can.png")
+        img = img_can
     elif clutter_type == "cat":
-        img = pygame.image.load("assets/textures/spacecat.png")
+        img = img_cat
     c = pymunk.Poly.create_box(clutter, (img.get_width(), img.get_height()))
     c.density = 0.001
     c.friction = 0.4
@@ -1350,6 +1357,27 @@ class TransitionScreen(Screen):
         super().render_ui(screen)
         self.ui_group.draw(screen)
 
+
+quotes = [
+    ["“Lost, so small amid that dark,",
+     "hands grown cold, body image fading down corridors",
+     "of television sky.” - William Gibson"],
+    ["“Among the things Billy Pilgrim could not change",
+     "were the past, the present, and the future.”",
+     "- Kurt Vonnegut"],
+    ["“It is better for us to see the destination",
+     "we wish to reach, than the point of departure.”",
+     "- Jules Verne"],
+    ["“We live on a placid island of ignorance",
+     "in the midst of black seas of the infinity,",
+     "and it was not meant that we should voyage far.”",
+     "- H.P. Lovecraft"],
+    ["“Looking up into the night sky is looking into infinity.",
+     "Distance is incomprehensible and therefore meaningless.“",
+     "- Douglas Adams"]
+]
+quote_iter = iter(random.sample(quotes, k=len(quotes)))
+
 class GameOverScreen(Screen):
     def __init__(self, game, has_sat=False, reset_level:typing.ClassVar[BaseLevel]=Level1):
         super().__init__(game)
@@ -1370,9 +1398,12 @@ class GameOverScreen(Screen):
         self.astronaut_rot = 0
 
         self.quote_alpha = -0.8
-        self.quote = TextSprite(["“Lost, so small amid that dark,",
-                                 "hands grown cold, body image fading down corridors",
-                                 "of television sky.” - William Gibson"])
+        global quote_iter
+        try:
+            self.quote = TextSprite(next(quote_iter))
+        except StopIteration:
+            quote_iter = iter(random.sample(quotes, k=len(quotes)))
+            self.quote = TextSprite(next(quote_iter))
         self.ui_group.add(self.quote)
 
 
