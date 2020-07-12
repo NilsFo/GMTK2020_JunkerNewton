@@ -1380,7 +1380,7 @@ def main():
     game.setup()
     print("Finished loading")
 
-    game.current_screen = Level6(game)
+    game.current_screen = Level1(game)
     game.current_screen.on_screen_enter()
 
     print("Starting Game Loop")
