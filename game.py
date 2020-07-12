@@ -958,8 +958,8 @@ class Level2(BaseLevel):
 
         self.satellite, c = create_satellite_body(self.worldgroup, position=(25.8*32,24*32))
         self.physspace.add(self.satellite, c)
-        self.physspace.add(create_asteroid_body(self.worldgroup, position=(26*32,5*32), velocity=(0,25)))
-        self.physspace.add(create_asteroid_body(self.worldgroup, position=(28*32, 3*32), velocity=(0, 10)))
+        self.physspace.add(create_asteroid_body(self.worldgroup, position=(26*32,5*32), velocity=(0,10)))
+        self.physspace.add(create_asteroid_body(self.worldgroup, position=(28*32, 3*32), velocity=(0, 5)))
 
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(22*32,16*32), velocity=(.3,.1), rotation=-0.7, angular_velocity=0.7))
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(23.8*32,16.2*32), velocity=(.1,-.1), rotation=1.5, angular_velocity=-0.2))
