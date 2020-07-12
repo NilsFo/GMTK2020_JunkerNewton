@@ -140,15 +140,22 @@ f.close()
 pygame.mixer.init()
 snd_bump_light = pygame.mixer.Sound("assets/sounds/bump_light.wav")
 snd_bump_hard = pygame.mixer.Sound("assets/sounds/bump_hard.wav")
-snd_bump_light.set_volume(0.3)
-snd_bump_hard.set_volume(0.3)
+snd_bump_light.set_volume(0.4)
+snd_bump_hard.set_volume(0.4)
 snd_jet1 = pygame.mixer.Sound("assets/sounds/jet1_wet.wav")
 snd_jet2 = pygame.mixer.Sound("assets/sounds/jet2_wet.wav")
-snd_jet1.set_volume(0.2)
-snd_jet2.set_volume(0.2)
+snd_jet1.set_volume(0.15)
+snd_jet2.set_volume(0.15)
+snd_click = pygame.mixer.Sound("assets/sounds/click.wav")
+snd_collect = pygame.mixer.Sound("assets/sounds/collect.wav")
+snd_click.set_volume(0.2)
+snd_collect.set_volume(0.4)
 
-pygame.mixer.set_num_channels(2)
+pygame.mixer.set_num_channels(4)
+mixer_other_channel = pygame.mixer.Channel(0)
 mixer_bump_channel = pygame.mixer.Channel(1)
+mixer_jet_channel = pygame.mixer.Channel(2)
+mixer_button_channel = pygame.mixer.Channel(3)
 
 dank_lore = ["It is the year 2187.",
              "Space is crawling with lost and wracked satellites and space junk.",
@@ -166,7 +173,9 @@ class Game:
         self.screen: pygame.Surface = screen
 
     def setup(self):
-        pass
+        pygame.mixer.music.load("assets/sounds/Revival.mp3")
+        pygame.mixer.music.set_volume(0.5)
+        pygame.mixer.music.play(-1)
 
     def game_loop(self):
         # Timing
@@ -475,7 +484,7 @@ class MainMenuScreen(Screen):
         print("A user input was made")
 
         if source == self.btn_story:
-            self.game.next_screen = TransitionScreen(self.game,Level0(self.game))
+            self.game.next_screen = Level0(self.game)
 
         if source == self.btn_select:
             self.game.next_screen = Level0(self.game)
@@ -608,6 +617,7 @@ class BaseLevel(Screen):
                                         filter(lambda s: isinstance(s, EntityRenderer), self.worldgroup.sprites()))
             self.worldgroup.remove(*associated_sprites)
             self.astronaut_state["has_sat"] = True
+            mixer_other_channel.play(snd_collect)
             print(self.astronaut_state)
 
             self.astronaut_sprite_normal = img_astronaut_sat
@@ -691,6 +701,7 @@ class BaseLevel(Screen):
     def level_win(self):
         display_debug_message("A winner is you!")
         t = TextSprite(["MISSION","ACCOMPLISHED"], ui_font_128)
+        mixer_other_channel.play(snd_collect)
         t.set_sprite_position(self.get_screen_size()[0]//2, self.get_screen_size()[1]//2, center=True)
         t.rect.x = t._sprite_x
         t.rect.y = t._sprite_y
@@ -838,27 +849,27 @@ class BaseLevel(Screen):
         self.astronaut.apply_impulse_at_local_point((2000*magnitude,0), (0,0))
         self.last_input = 1
         self.sprite_timer = 0
-        snd_jet1.play()
+        mixer_jet_channel.play(snd_jet1)
 
     def astronaut_backward(self, magnitude=1):
         self.astronaut.apply_impulse_at_local_point((-2000*magnitude,0), (0,0))
         self.last_input = 2
         self.sprite_timer = 0
-        snd_jet1.play()
+        mixer_jet_channel.play(snd_jet1)
 
     def astronaut_turn_forward(self, magnitude=1):
         self.astronaut.apply_impulse_at_local_point((-200*magnitude,0), (30,60))
         self.astronaut.apply_impulse_at_local_point((200*magnitude,0), (-30,-60))
         self.last_input = 3
         self.sprite_timer = 0
-        snd_jet2.play()
+        mixer_jet_channel.play(snd_jet2)
 
     def astronaut_turn_backward(self, magnitude=1):
         self.astronaut.apply_impulse_at_local_point((200*magnitude,0), (30,60))
         self.astronaut.apply_impulse_at_local_point((-200*magnitude,0), (-30,-60))
         self.last_input = 4
         self.sprite_timer = 0
-        snd_jet2.play()
+        mixer_jet_channel.play(snd_jet2)
 
     def align_ui_buttons(self):
         w,h = self.get_screen_size()
@@ -1353,7 +1364,7 @@ class Level6(BaseLevel):
         handler.pre_solve = self.collect
 
     def get_level_name(self):
-        return ['Retroactive Thrust',6]
+        return ["End's Met",6]
 
     def check_win_condition(self):
         return super().check_win_condition() and self.astronaut_state["has_sat"]
@@ -1388,8 +1399,8 @@ class TransitionScreen(Screen):
         w,h = self.get_screen_size()
 
         self.ui_group.update(dt)
-        self.title_text.rect.center = (w/2,h/2-80)
-        self.sub_title_text.rect.center = (w/2,h/2+50)
+        self.title_text.rect.center = (w/2,h/2+50)
+        self.sub_title_text.rect.center = (w/2,h/2-80)
         self.click_text.rect.center = (w/2,h-50)
 
         #self.updates_current+=dt
@@ -1827,6 +1838,7 @@ class ControlButton(AnimatedEntity):
 
     def on_execute(self):
         self.pressed_mode=True
+        mixer_button_channel.play(snd_click)
         self.update_sprite()
 
     def update(self, dt):
