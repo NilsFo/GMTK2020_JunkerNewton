@@ -552,6 +552,8 @@ class MainMenuScreen(Screen):
         self.btn_story = None
         self.btn_select = None
         self.btn_continue = None
+        self.btn_music = None
+        self.btn_sound = None
         self.credit_lines = []
 
         for line in credits:
@@ -592,18 +594,26 @@ class MainMenuScreen(Screen):
         super().setup_ui_elements(screen_w, screen_h, manager)
 
         self.btn_story = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((screen_w - 225, 50), (160, 90)),
+            relative_rect=pygame.Rect((screen_w - 225, 50), (160, 50)),
             text='New Game',
             manager=manager)
         self.btn_select = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((screen_w - 225, 150), (160, 90)),
+            relative_rect=pygame.Rect((screen_w - 225, 120), (160, 50)),
             text='Level Select',
             manager=manager)
         if self.parent_screen is not None:
             self.btn_continue = pygame_gui.elements.UIButton(
-                relative_rect=pygame.Rect((screen_w - 225, 250), (160, 90)),
+                relative_rect=pygame.Rect((screen_w - 225, 190), (160, 50)),
                 text='Continue',
                 manager=manager)
+        self.btn_continue = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((20, screen_h-70), (160, 50)),
+            text='Toggle Music',
+            manager=manager)
+        self.btn_continue = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((20, screen_h-70*2), (160, 50)),
+            text='Toggle Sound',
+            manager=manager)
 
     def on_ui_input_event(self, event, source):
         super().on_ui_input_event(event, source)
@@ -616,6 +626,11 @@ class MainMenuScreen(Screen):
             self.game.next_screen = LevelSelectScreen(self.game)
 
         if source == self.btn_continue:
+            self.game.next_screen = self.parent_screen
+
+        if source == self.btn_sound:
+            self.game.next_screen = self.parent_screen
+        if source == self.btn_music:
             self.game.next_screen = self.parent_screen
 
 
@@ -809,8 +824,7 @@ class BaseLevel(Screen):
             self.next_level_timer -= dt
 
             if self.next_level_timer <= 0 and self.next_level is not None:
-                lv = self.next_level(game)
-                self.game.next_screen = TransitionScreen(self.game,lv)
+                self.on_level_win()
 
         if self.check_out_of_bounds(self.astronaut):
             self.game.next_screen = GameOverScreen(self.game, self.astronaut_state["has_sat"], self.__class__)
@@ -819,7 +833,9 @@ class BaseLevel(Screen):
         if self.check_out_of_bounds(self.satellite):
             self.satellite.velocity = (pymunk.Vec2d(self.map.width/2, self.map.height/2) - self.satellite.position).normalized() * 10
 
-
+    def on_level_win(self):
+        lv = self.next_level(game)
+        self.game.next_screen = TransitionScreen(self.game, lv)
 
     def get_level_name(self):
         return ['Your level name here',-1]
@@ -1463,7 +1479,7 @@ class Level6(BaseLevel):
         self.astronaut.angle = 0.15
         self.astronaut_state["has_sat"] = False
 
-        self.next_level = None
+        self.next_level = 1
 
         self.satellite, c = create_satellite_body(self.worldgroup, position=(14*32,17.5*32))
         self.physspace.add(self.satellite, c)
@@ -1496,6 +1512,9 @@ class Level6(BaseLevel):
 
     def get_signal_position(self):
         return self.satellite.position if not self.astronaut_state["has_sat"] else None
+
+    def on_level_win(self):
+        self.game.next_screen = TransitionScreen(self.game,MainMenuScreen(self.game),text="Congratulations!",subtitle="Thanks for playing!")
 
 
 class TransitionScreen(Screen):
