@@ -473,6 +473,8 @@ class BaseLevel(Screen):
         self.astronaut_sprite_tb = img_astronaut_tb
         self.astronaut_sprite_tl = img_astronaut_tl
 
+        self.satellite: pymunk.Body = None
+
         # Add physics from map tiles
         layer = "Collision"
         tile_size_x, tile_size_y = self.map_data.tile_size
@@ -578,8 +580,12 @@ class BaseLevel(Screen):
             if self.next_level_timer <= 0 and self.next_level is not None:
                 self.game.next_screen = self.next_level(game)
 
-        if self.check_out_of_bounds():
+        if self.check_out_of_bounds(self.astronaut):
             self.game.next_screen = GameOverScreen(self.game, self.astronaut_state["has_sat"], self.__class__)
+
+        # Send the satellite back if its OOB
+        if self.check_out_of_bounds(self.satellite):
+            self.satellite.velocity = (pymunk.Vec2d(self.map.width/2, self.map.height/2) - self.satellite.position).normalized() * 10
 
     def level_win(self):
         display_debug_message("A winner is you!")
@@ -591,12 +597,12 @@ class BaseLevel(Screen):
                 bt.active = False
                 bt.update_sprite()
 
-    def check_out_of_bounds(self):
+    def check_out_of_bounds(self, body):
         grace = 100
-        return (self.astronaut.position.x > self.map.width*self.map.tilewidth + grace
-                or self.astronaut.position.x < 0 - grace
-                or self.astronaut.position.y > self.map.height*self.map.tileheight + grace
-                or self.astronaut.position.y < 0 - grace)
+        return (body.position.x > self.map.width*self.map.tilewidth + grace
+                or body.position.x < 0 - grace
+                or body.position.y > self.map.height*self.map.tileheight + grace
+                or body.position.y < 0 - grace)
 
     def render(self, surface):
         self.worldgroup.draw(surface)
