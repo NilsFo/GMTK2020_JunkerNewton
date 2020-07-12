@@ -3,6 +3,8 @@ import random
 import typing
 from datetime import datetime
 from math import floor
+import pygame_gui
+from pygame_gui import UIManager
 
 import numpy as np
 import pygame
@@ -12,13 +14,18 @@ import pyscroll
 from pygame.sprite import Sprite
 from pytmx import load_pygame
 
+import interpolation
 from interpolation import *
 
 pygame.init()
 
+debug_mode = True
+
 MAX_FPS = 60
 screen_width = 1500
 screen_height = floor(screen_width / (16 / 9))
+_update_time = 1.0 / 60.0
+key_escape = 27
 
 black = (0, 0, 0)
 white = (0, 0, 0)
@@ -31,13 +38,19 @@ pygame.display.set_caption("Junker Newton")
 
 gmtk_font = "assets/fonts/FiraSans-Light.ttf"
 
-ui_font = pygame.font.Font(gmtk_font, 30)
+ui_font_8 = pygame.font.Font(gmtk_font, 8)
+ui_font_12 = pygame.font.Font(gmtk_font, 12)
+ui_font_15 = pygame.font.Font(gmtk_font, 15)
+ui_font_18 = pygame.font.Font(gmtk_font, 18)
+ui_font_21 = pygame.font.Font(gmtk_font, 21)
+ui_font_24 = pygame.font.Font(gmtk_font, 24)
 ui_font_48 = pygame.font.Font(gmtk_font, 48)
 ui_font_64 = pygame.font.Font(gmtk_font, 64)
 ui_font_72 = pygame.font.Font(gmtk_font, 72)
 ui_font_128 = pygame.font.Font(gmtk_font, 128)
 
 ## ASSETS
+mm_background = pygame.image.load("assets/background/background.jpg")
 black_hole_bg = pygame.image.load("assets/textures/bh_visualization.jpg")
 img_astronaut = pygame.image.load("assets/textures/astronaut/astronaut.png")
 img_astronaut_sat = pygame.image.load("assets/textures/astronaut/astronaut-sat.png")
@@ -70,6 +83,12 @@ btn_left_img_disabled = pygame.transform.scale(btn_left_img_disabled, np.array(b
 btn_right_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_right2.png")
 btn_right_img_disabled = pygame.transform.scale(btn_right_img_disabled, np.array(btn_right_img_disabled.get_size()) * 3)
 
+# Credits
+f = open("assets/credits.txt")
+credits = f.readlines()
+f.close()
+
+# Sound & Music
 pygame.mixer.init()
 snd_bump_light = pygame.mixer.Sound("assets/sounds/bump_light.wav")
 snd_bump_hard = pygame.mixer.Sound("assets/sounds/bump_hard.wav")
@@ -88,7 +107,7 @@ class Game:
         self.debug_font = pygame.font.Font(gmtk_font, 25)
 
         self.current_screen: BaseLevel = None
-        self.next_screen = None
+        self.next_screen:Screen = None
         self.screen: pygame.Surface = screen
 
     def setup(self):
@@ -103,7 +122,12 @@ class Game:
         running = True
         while running:
             if self.next_screen:
+                print("Going to the next screen!")
+                self.current_screen.on_screen_exit()
+                # self.next_screen.parent_screen = self.current_screen
                 self.current_screen = self.next_screen
+                self.current_screen.on_screen_enter()
+                self.next_screen = None
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -116,6 +140,9 @@ class Game:
                 if event.type == pygame.KEYDOWN:
                     self.current_screen.on_key_press(event)
 
+                    if event.key == key_escape:
+                        self.current_screen.on_key_escape(event)
+
                 if event.type == pygame.KEYUP:
                     self.current_screen.on_key_release(event)
 
@@ -124,7 +151,7 @@ class Game:
 
                 if event.type == pygame.VIDEORESIZE:
                     pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
-                    pygame.display.set_caption("MORTAL CONGA (" + str(event.w) + "x" + str(event.h) + ")")
+                    pygame.display.set_caption("Junker Newton")
 
                     if self.current_screen is not None:
                         self.current_screen.on_resize()
@@ -151,6 +178,12 @@ class Game:
             pygame.display.flip()
             dt = clock.tick_busy_loop(MAX_FPS) / 1000
 
+    def to_main_menu(self, first_start: bool = False):
+        mn = MainMenuScreen(game)
+        self.next_screen = mn
+
+        if first_start:
+            mn.on_game_startup()
 
 ## LEVEL SCREEN
 
@@ -166,9 +199,217 @@ def create_button_bag():
     random.shuffle(bag)
     return iter(bag)
 
-class BaseLevel:
-    def __init__(self, game, map_name="test_dungeon.tmx"):
+class Screen():
+
+    def __init__(self, game, parent_screen=None):
+        super().__init__()
         self.game = game
+        # TODO can we remove this field?
+
+        self.delta_time = 0
+        self.ups = 0
+
+        self.screen_shake_timer = 0
+        self.screen_shake_magnitude = 0
+        self.shake_offset_x = 0
+        self.shake_offset_y = 0
+
+        self.camera_offset_x = 0
+        self.camera_offset_y = 0
+
+        self.camera_zoom = 1
+
+        self.ui_manager: pygame_gui.UIManager = None
+        # A parent screen to render, in case this screen is a overlay
+        self.parent_screen = parent_screen
+
+    def update(self, dt):
+        self.delta_time += dt
+        if self.delta_time > _update_time:
+            self.update_fixed()
+            self.delta_time -= _update_time
+            self.ups += 1
+            #print('UPD: ' + str(self.ups) + '. Delta: ' + str(self.delta_time) + '. Dt: ' + str(dt))
+
+        self.screen_shake_timer = max(0, self.screen_shake_timer - dt)
+
+        self.ui_manager.update(dt)
+
+    def update_fixed(self):
+        if self.is_screen_shaking():
+            self.shake_offset_x = random.randint(-self.screen_shake_magnitude, self.screen_shake_magnitude)
+            self.shake_offset_y = random.randint(-self.screen_shake_magnitude, self.screen_shake_magnitude)
+        pass
+
+    def render(self, screen):
+        if self.parent_screen is not None:
+            self.parent_screen.render(screen)
+            self.parent_screen.postprocess_render(screen)
+            self.parent_screen.render_ui(screen)
+
+    def render_ui(self, screen):
+        self.ui_manager.draw_ui(screen)
+
+    def postprocess_render(self, screen):
+        # This should not be overwritten, but if you do, please call the super()
+        if (self.camera_offset_x != 0 or self.camera_offset_y != 0) and self.camera_zoom == 1:
+            orig_screen = screen.copy()
+            screen.fill((0, 0, 0))
+            screen.blit(orig_screen, (self.camera_offset_x, self.camera_offset_y))
+
+        if self.camera_zoom != 1:
+            w, h = screen.get_size()
+            sx = int(w / self.camera_zoom)
+            sy = int(h / self.camera_zoom)
+            r = pygame.Rect(self.camera_offset_x, self.camera_offset_y, sx, sy)
+
+            temp = pygame.Surface((sx, sy))
+            temp.blit(screen, (0, 0), r)
+            temp = pygame.transform.scale(temp, (w, h))
+
+            screen.fill((0, 0, 0))
+            screen.blit(temp, (0, 0))
+
+        if self.is_screen_shaking():
+            orig_screen = screen.copy()
+            screen.fill((0, 0, 0))
+            screen.blit(orig_screen, (self.shake_offset_x, self.shake_offset_y))
+
+    def on_mouse_release(self,event):
+        pass
+
+    def on_key_press(self, event):
+        print("Key was pressed: " + str(event.key) + " ('" + event.unicode + "')")
+
+    def on_key_release(self, event):
+        print("Key was released: " + str(event.key))
+
+    def on_key_escape(self,event):
+        pass
+
+    def on_resize(self):
+        self.init_ui()
+
+    def on_screen_enter(self):
+        self.init_ui()
+
+    def on_screen_exit(self):
+        pass
+
+    def on_input_event(self, event):
+        self.ui_manager.process_events(event)
+        if event.type == pygame.USEREVENT:
+            if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
+                self.on_ui_input_event(event, event.ui_element)
+
+    def on_ui_input_event(self, event, source):
+        pass
+
+    def init_ui(self):
+        # Internal function that should not be overwritten
+        w, h = pygame.display.get_surface().get_size()
+        self.ui_manager = pygame_gui.UIManager((w, h))
+        # self.ui_manager.set_visual_debug_mode(True)
+        self.setup_ui_elements(screen_w=w, screen_h=h, manager=self.ui_manager)
+
+    def setup_ui_elements(self, screen_w: int, screen_h: int, manager: UIManager):
+        # This function should be overwritten to determine UI elements
+        pass
+
+    def set_screen_shake(self, duration_dt: int, magnitude: int):
+        self.screen_shake_timer = duration_dt
+        self.screen_shake_magnitude = magnitude
+
+    def is_screen_shaking(self):
+        return self.screen_shake_timer > 0
+
+    def center_camera(self, x: int = None, y: int = None):
+        # Centers the camera on a specific location, taking the zoom into account
+        w, h = self.get_screen_size()
+        if x is None:
+            x = int(w / 2)
+        if y is None:
+            y = int(h / 2)
+
+        ox = int(x - (w / self.camera_zoom) / 2)
+        oy = int(y - (h / self.camera_zoom) / 2)
+        self.camera_offset_y = oy
+        self.camera_offset_x = ox
+
+    def set_camera_offset(self, camera_offset_x=0, camera_offset_y=0):
+        self.camera_offset_x = camera_offset_x
+        self.camera_offset_y = camera_offset_y
+
+    def reset_camera(self):
+        self.camera_offset_x = 0
+        self.camera_offset_y = 0
+        self.camera_zoom = 1
+
+    def stop_shake(self):
+        self.screen_shake_timer = 0
+
+    def get_screen_size(self):
+        return self.game.screen.get_size()
+
+class MainMenuScreen(Screen):
+    def __init__(self, game):
+        super().__init__(game)
+
+        self.btn_story = None
+        self.btn_select = None
+        self.credit_lines = []
+
+        for line in credits:
+            print(line)
+            self.credit_lines.append(ui_font_18.render(line, True, (255, 255, 255)))
+
+    def render(self, screen):
+        super().render(screen)
+        screen.blit(mm_background,(0,0))
+
+    def on_game_startup(self):
+        display_debug_message("Welcome to JUNKER NEWTON! THANKS FOR PLAYING!",time=20)
+        display_debug_message("Make sure to look up the controls before playing!",time=21)
+        display_debug_message("Have fun!",time=22)
+        display_debug_message("<3",time=7)
+
+    def render_ui(self, screen):
+        super().render_ui(screen)
+        w,h = self.get_screen_size()
+        start_x = w-350
+        start_y = h-525
+
+        i = 0
+        for line in self.credit_lines:
+            screen.blit(line,(start_x,start_y+28*i))
+            i+=1
+
+    def setup_ui_elements(self, screen_w: int, screen_h: int, manager: UIManager):
+        super().setup_ui_elements(screen_w, screen_h, manager)
+
+        self.btn_story = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((screen_w - 225, 50), (160, 90)),
+            text='Story Mode',
+            manager=manager)
+        self.btn_select = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((screen_w - 225, 150), (160, 90)),
+            text='Level Select',
+            manager=manager)
+
+    def on_ui_input_event(self, event, source):
+        super().on_ui_input_event(event, source)
+        print("A user input was made")
+
+        if source == self.btn_story:
+            self.game.next_screen = Level1(self.game)
+
+        if source == self.btn_select:
+            self.game.next_screen = Level1(self.game)
+
+
+class BaseLevel(Screen):
+    def __init__(self, game, map_name="test_dungeon.tmx"):
+        super().__init__(game)
 
         self.next_level = None
 
@@ -280,6 +521,7 @@ class BaseLevel:
         self.worldgroup = pyscroll.PyscrollGroup(map_layer=self.world)
 
     def update(self, dt):
+        super().update(dt)
         self.physspace.step(dt)
         self.worldgroup.update(dt)
         self.ui_group.update(dt)
@@ -306,6 +548,7 @@ class BaseLevel:
             if bt.expired:
                 display_debug_message('Button expired!')
                 self.on_control_button_pressed(i)
+                self.set_screen_shake(duration_dt=2, magnitude=2)
 
         if self.check_win_condition() and not self.level_won:
             self.level_won = True
@@ -324,6 +567,11 @@ class BaseLevel:
         display_debug_message("A winner is you!")
         t = TextSprite("MISSION ACCOMPLISHED", ui_font_128, self.ui_group)
         t.set_sprite_position(self.get_screen_size()[0]//2, self.get_screen_size()[1]//2, center=True)
+
+        for bt in self.active_button_queue:
+            if bt is not None:
+                bt.active = False
+                bt.update_sprite()
 
     def check_out_of_bounds(self):
         grace = 100
@@ -355,25 +603,30 @@ class BaseLevel:
         self.world.center(view_center)
         self.align_ui_buttons()
 
+    def on_key_escape(self, event):
+        super().on_key_escape(event)
+        self.game.to_main_menu()
+
     def on_key_press(self, event):
-        if event.key == pygame.K_DOWN:
-            self.astronaut_backward()
-        if event.key == pygame.K_UP:
-            self.astronaut_forward()
-        if event.key == pygame.K_LEFT:
-            self.astronaut_turn_backward()
-        if event.key == pygame.K_RIGHT:
-            self.astronaut_turn_forward()
+        if debug_mode:
+            if event.key == pygame.K_DOWN:
+                self.astronaut_backward()
+            if event.key == pygame.K_UP:
+                self.astronaut_forward()
+            if event.key == pygame.K_LEFT:
+                self.astronaut_turn_backward()
+            if event.key == pygame.K_RIGHT:
+                self.astronaut_turn_forward()
 
         #Num keys 1-4: 49-51
         print('Key event: '+str(event.key))
-        if event.key == 49:
+        if event.key == 49 or event.key == 113:
             self.on_control_button_pressed(0)
-        if event.key == 50:
+        if event.key == 50 or event.key == 119:
             self.on_control_button_pressed(1)
-        if event.key == 51:
+        if event.key == 51 or event.key == 101:
             self.on_control_button_pressed(2)
-        if event.key == 52:
+        if event.key == 52 or event.key == 114:
             self.on_control_button_pressed(3)
 
     def on_control_button_pressed(self,index):
@@ -392,8 +645,10 @@ class BaseLevel:
             self.astronaut_turn_backward(mag)
         if bt.type==2:
             self.astronaut_turn_forward(mag)
+        self.set_screen_shake(1,5)
 
-        bt.animate(Animation2D((0,0),(200,200),2,interpolation=bounce()))
+        interpolator = interpolation.Smooth()
+        bt.animate(Animation2D((0,0),(200,200),2,interpolation=interpolator))
 
         bt.on_execute()
         #bt.stop_animations()
@@ -403,7 +658,7 @@ class BaseLevel:
         next_bt = self.waiting_button_queue.pop(0)
         distance_x= self.get_button_x(index) - next_bt.get_sprite_position_x()
         next_bt.stop_animations()
-        next_bt.animate(Animation2D((0,0),(distance_x,0),.5))
+        next_bt.animate(Animation2D((0,0),(distance_x,0),.5,interpolation=interpolator))
         next_bt.countdown_dt = countdown_intervals[index]
         self.active_button_queue[index] = next_bt
 
@@ -488,21 +743,25 @@ class BaseLevel:
         x = w+100
         bt = ControlButton(self,bt_type,x,1,active=False)
         self.waiting_button_queue.append(bt)
+
+        self.reverse_ordered_button_queue()
         self.ordered_button_group.add(bt)
+        self.reverse_ordered_button_queue()
 
         return bt
 
+    def reverse_ordered_button_queue(self):
+        nl = []
+        for bt in self.ordered_button_group:
+            nl.append(bt)
+        nl.reverse()
+        self.ordered_button_group.empty()
+        for nl in nl:
+            self.ordered_button_group.add(nl)
+
+
     def check_win_condition(self):
         return self.win_trigger.contains_vect(self.astronaut.position)
-
-    def on_key_release(self, event):
-        pass
-
-    def get_screen_size(self):
-        return self.game.screen.get_size()
-
-    def postprocess_render(self, screen):
-        pass
 
     def render_ui(self, screen):
         w, h = self.get_screen_size()
@@ -541,7 +800,7 @@ class BaseLevel:
         # Drawing hotkeys
         for i in range(4):
             bx = self.get_button_x(i)
-            hotkey_text = ui_font.render(str(i+1),False,(0,0,0))
+            hotkey_text = ui_font_24.render(str(i + 1), False, (0, 0, 0))
             screen.blit(hotkey_text,(bx+5,h-bh-65))
 
         self.ui_group.draw(screen)
@@ -561,20 +820,8 @@ class BaseLevel:
     def get_button_ui_width(self):
         return self.get_button_x(1)-self.get_button_x(0)
 
-    def on_screen_enter(self):
-        pass
-
     def on_screen_exit(self):
         display_debug_message('Leaving game screen.')
-
-    def on_input_event(self, event):
-        pass
-
-    def on_ui_input_event(self, event, source):
-        pass
-
-    def get_signal_position(self):
-        return None
 
 
 ## PHYSICS BODY CREATORS
@@ -775,8 +1022,10 @@ class Level3(BaseLevel):
     def get_signal_position(self):
         return self.satellite.position if not self.astronaut_state["has_sat"] else None
 
-class GameOverScreen:
+class GameOverScreen(Screen):
     def __init__(self, game, has_sat=False, reset_level:typing.ClassVar[BaseLevel]=Level1):
+        super().__init__(game)
+
         self.game = game
         self.screen = game.screen
         self.reset_level = reset_level
@@ -800,6 +1049,7 @@ class GameOverScreen:
 
 
     def update(self, dt):
+        super().update(dt)
         self.group.update(dt)
         self.ui_group.update(dt)
 
@@ -829,9 +1079,6 @@ class GameOverScreen:
         size = display.get_surface().get_size()
         self.bg_image = pygame.transform.smoothscale(black_hole_bg, self.get_screen_size())
 
-    def on_key_press(self, event):
-        pass
-
     def on_key_release(self, event):
         if self.quote_alpha > 0:
             game.next_screen = self.reset_level(self.game)
@@ -839,24 +1086,9 @@ class GameOverScreen:
     def get_screen_size(self):
         return self.game.screen.get_size()
 
-    def postprocess_render(self, screen):
-        pass
-
     def render_ui(self, screen):
         self.ui_group.draw(screen)
         #screen.blit(self.quote.image, (0,0))
-
-    def on_screen_enter(self):
-        pass
-
-    def on_screen_exit(self):
-        pass
-
-    def on_input_event(self, event):
-        pass
-
-    def on_ui_input_event(self, event, source):
-        pass
 
 class Animation2D:
     def __init__(self,
@@ -1149,7 +1381,7 @@ class ControlButton(AnimatedEntity):
     def update(self, dt):
         super().update(dt)
 
-        if self.active:
+        if self.active and self.level.level_won is not True:
             self.countdown_current += dt
 
         if self.countdown_current >= self.countdown_dt:
@@ -1251,8 +1483,9 @@ def main():
     game.setup()
     print("Finished loading")
 
-    game.current_screen = Level1(game)
+    game.current_screen = MainMenuScreen(game)
     game.current_screen.on_screen_enter()
+    game.current_screen.on_game_startup()
 
     print("Starting Game Loop")
     game.game_loop()
