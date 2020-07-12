@@ -53,6 +53,7 @@ ui_font_128 = pygame.font.Font(gmtk_font, 128)
 ## ASSETS
 mm_background = pygame.image.load("assets/background/background.png").convert()
 mm_logo = pygame.image.load("assets/background/logo.png")
+
 black_hole_bg = pygame.image.load("assets/textures/bh_visualization.jpg")
 img_astronaut = pygame.image.load("assets/textures/astronaut/astronaut.png")
 img_astronaut_sat = pygame.image.load("assets/textures/astronaut/astronaut-sat.png")
@@ -78,6 +79,10 @@ img_sat_base = pygame.image.load("assets/textures/satellite_catched1.png")
 img_sat_base_complete = pygame.image.load("assets/textures/satellite_catched.png")
 
 # LOADING ACTIVE BUTTONS
+img_conveyor_slots = pygame.image.load("assets/textures/button_bg_bg.png")
+img_conveyor_slots = pygame.transform.scale(img_conveyor_slots, np.array(img_conveyor_slots.get_size()) * 3)
+
+
 btn_accelerate_img = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_speedup1.png")
 btn_accelerate_img = pygame.transform.scale(btn_accelerate_img, np.array(btn_accelerate_img.get_size()) * 3)
 btn_decelerate_img = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_speeddown1.png")
@@ -141,7 +146,7 @@ level_preview_5 = pygame.image.load("assets/maps/previews/level5.png")
 level_preview_6 = pygame.image.load("assets/maps/previews/level6.png")
 
 # Credits
-f = open("assets/credits.txt",encoding='UTF-8')
+f = open("credits.txt",encoding='UTF-8')
 credits = f.readlines()
 f.close()
 
@@ -180,6 +185,8 @@ class Game:
         self.current_screen: BaseLevel = None
         self.next_screen:Screen = None
         self.screen: pygame.Surface = screen
+        self.toggle_music = True
+        self.toggle_sound = True
 
     def setup(self):
         pygame.mixer.music.load("assets/sounds/Revival.mp3")
@@ -397,8 +404,8 @@ class Screen():
     def init_ui(self):
         # Internal function that should not be overwritten
         w, h = pygame.display.get_surface().get_size()
-        self.ui_manager = pygame_gui.UIManager((w, h))
-        # self.ui_manager.set_visual_debug_mode(True)
+        self.ui_manager = pygame_gui.UIManager((w, h),theme_path='assets/ui_theme.json')
+        #self.ui_manager.set_visual_debug_mode(True)
         self.setup_ui_elements(screen_w=w, screen_h=h, manager=self.ui_manager)
 
     def setup_ui_elements(self, screen_w: int, screen_h: int, manager: UIManager):
@@ -573,12 +580,6 @@ class MainMenuScreen(Screen):
 
         screen.blit(mm_background,(x,y))
 
-    def on_game_startup(self):
-        display_debug_message("Welcome to JUNKER NEWTON! THANKS FOR PLAYING!",time=20)
-        display_debug_message("Make sure to look up the controls before playing!",time=21)
-        display_debug_message("Have fun!",time=22)
-        display_debug_message("<3",time=7)
-
     def render_ui(self, screen):
         super().render_ui(screen)
         w,h = self.get_screen_size()
@@ -606,11 +607,11 @@ class MainMenuScreen(Screen):
                 relative_rect=pygame.Rect((screen_w - 225, 190), (160, 50)),
                 text='Continue',
                 manager=manager)
-        self.btn_continue = pygame_gui.elements.UIButton(
+        self.btn_music = pygame_gui.elements.UIButton(
             relative_rect=pygame.Rect((20, screen_h-70), (160, 50)),
             text='Toggle Music',
             manager=manager)
-        self.btn_continue = pygame_gui.elements.UIButton(
+        self.btn_sound = pygame_gui.elements.UIButton(
             relative_rect=pygame.Rect((20, screen_h-70*2), (160, 50)),
             text='Toggle Sound',
             manager=manager)
@@ -629,9 +630,28 @@ class MainMenuScreen(Screen):
             self.game.next_screen = self.parent_screen
 
         if source == self.btn_sound:
-            self.game.next_screen = self.parent_screen
+            self.game.toggle_sound = not self.game.toggle_sound
+            if self.game.toggle_sound:
+                mixer_bump_channel.set_volume(1)
+                mixer_jet_channel.set_volume(1)
+                mixer_button_channel.set_volume(1)
+                mixer_other_channel.set_volume(1)
+                display_debug_message("Sound on.")
+            else:
+                mixer_bump_channel.set_volume(0)
+                mixer_jet_channel.set_volume(0)
+                mixer_button_channel.set_volume(0)
+                mixer_other_channel.set_volume(0)
+                display_debug_message("Sound off.")
+
         if source == self.btn_music:
-            self.game.next_screen = self.parent_screen
+            self.game.toggle_music = not self.game.toggle_music
+            if self.game.toggle_music:
+                pygame.mixer.music.play()
+                display_debug_message("Music on.")
+            else:
+                pygame.mixer.music.stop()
+                display_debug_message("Music off.")
 
 
 class BaseLevel(Screen):
@@ -812,7 +832,7 @@ class BaseLevel(Screen):
         for i in range(len(self.active_button_queue)):
             bt = self.active_button_queue[i]
             if bt.expired:
-                display_debug_message('Button expired!')
+                #display_debug_message('Button expired!')
                 self.on_control_button_pressed(i)
                 self.set_screen_shake(duration_dt=.5, magnitude=1)
 
@@ -841,7 +861,7 @@ class BaseLevel(Screen):
         return ['Your level name here',-1]
 
     def level_win(self):
-        display_debug_message("A winner is you!")
+        #display_debug_message("A winner is you!")
         t = TextSprite(["MISSION","ACCOMPLISHED"], ui_font_128)
         mixer_other_channel.play(snd_collect)
         t.set_sprite_position(self.get_screen_size()[0]//2, self.get_screen_size()[1]//2, center=True)
@@ -930,8 +950,6 @@ class BaseLevel(Screen):
     def on_control_button_pressed(self,index):
         bt = self.active_button_queue[index]
         if bt is None or not bt.active:
-            display_debug_message('This action is not ready yet')
-            #TODO: Display message
             return
 
         mag = bt.magnitude
@@ -1078,6 +1096,11 @@ class BaseLevel(Screen):
             conv_mod = i*16*3
             screen.blit(self.conveyor_bg,(w/2+128*3+conv_mod,h-62*3-6))
 
+        # Drawing conveyor bg plates
+        for i in range(4):
+            bx = self.get_button_x(i)
+            screen.blit(img_conveyor_slots,(bx,h-bh-24))
+
         #self.button_group.draw(screen)
         self.ordered_button_group.draw(screen)
 
@@ -1109,12 +1132,6 @@ class BaseLevel(Screen):
 
                         screen.blit(glow,(btx-12,bty-12))
 
-        # Drawing hotkeys
-        for i in range(4):
-            bx = self.get_button_x(i)
-            hotkey_text = ui_font_24.render(hotkey_list[i], False, (0, 0, 0))
-            screen.blit(hotkey_text,(bx+5,h-bh-60))
-
         self.ui_group.draw(screen)
 
     def get_button_x(self, index):
@@ -1131,9 +1148,6 @@ class BaseLevel(Screen):
 
     def get_button_ui_width(self):
         return self.get_button_x(1)-self.get_button_x(0)
-
-    def on_screen_exit(self):
-        display_debug_message('Leaving game screen.')
 
 
 ## PHYSICS BODY CREATORS
@@ -1661,6 +1675,15 @@ class GameOverScreen(Screen):
         self.ui_group.draw(screen)
         #screen.blit(self.quote.image, (0,0))
 
+    def on_screen_enter(self):
+        super().on_screen_enter()
+        pygame.mixer.music.fadeout(1000)
+
+    def on_screen_exit(self):
+        super().on_screen_exit()
+        pygame.mixer.music.play()
+
+
 class Animation2D:
     def __init__(self,
                  vector_from: typing.Tuple[float, float],
@@ -2067,11 +2090,11 @@ class TextSprite(AnimatedEntity):
 
 ### DEBUG MESSAGES
 _debug_message_list = []
-debug_message_default_time = 5
+debug_message_default_time = 3
 
 
 def display_debug_message(msg: str, time=debug_message_default_time):
-    msg = '[' + gct() + '] ' + msg.strip()
+    msg = msg.strip()
     _debug_message_list.append((msg, time))
     print(msg)
 
