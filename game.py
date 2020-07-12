@@ -28,8 +28,8 @@ _update_time = 1.0 / 60.0
 key_escape = 27
 
 black = (0, 0, 0)
-white = (0, 0, 0)
-
+white = (255, 255, 255)
+hotkey_list = ['Q', 'W', 'E', 'R']
 countdown_intervals = [8,10,12,14]
 
 display = pygame.display
@@ -52,6 +52,7 @@ ui_font_128 = pygame.font.Font(gmtk_font, 128)
 
 ## ASSETS
 mm_background = pygame.image.load("assets/background/background.png").convert()
+mm_logo = pygame.image.load("assets/background/logo.png")
 black_hole_bg = pygame.image.load("assets/textures/bh_visualization.jpg")
 img_astronaut = pygame.image.load("assets/textures/astronaut/astronaut.png")
 img_astronaut_sat = pygame.image.load("assets/textures/astronaut/astronaut-sat.png")
@@ -130,6 +131,14 @@ btn_accelerate_img_glow.set_alpha(210)
 btn_decelerate_img_glow.set_alpha(210)
 btn_left_img_glow.set_alpha(210)
 btn_right_img_glow.set_alpha(210)
+
+## Level Previews
+level_preview_1 = pygame.image.load("assets/maps/previews/level1.png")
+level_preview_2 = pygame.image.load("assets/maps/previews/level2.png")
+level_preview_3 = pygame.image.load("assets/maps/previews/level3.png")
+level_preview_4 = pygame.image.load("assets/maps/previews/level4.png")
+level_preview_5 = pygame.image.load("assets/maps/previews/level5.png")
+level_preview_6 = pygame.image.load("assets/maps/previews/level6.png")
 
 # Credits
 f = open("assets/credits.txt",encoding='UTF-8')
@@ -370,6 +379,18 @@ class Screen():
             if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
                 self.on_ui_input_event(event, event.ui_element)
 
+            if event.user_type == pygame_gui.UI_BUTTON_ON_HOVERED:
+                self.on_ui_hovered_event(event, event.ui_element)
+
+            if event.user_type == pygame_gui.UI_BUTTON_ON_UNHOVERED:
+                self.on_ui_unhovered_event(event, event.ui_element)
+
+    def on_ui_unhovered_event(self, event, source):
+        pass
+
+    def on_ui_hovered_event(self, event, source):
+        pass
+
     def on_ui_input_event(self, event, source):
         pass
 
@@ -418,6 +439,111 @@ class Screen():
 
     def get_screen_size(self):
         return self.game.screen.get_size()
+
+class LevelSelectScreen(Screen):
+
+    def __init__(self, game, parent_screen=None):
+        super().__init__(game, parent_screen)
+        self.btn_level1 = None
+        self.btn_level2 = None
+        self.btn_level3 = None
+        self.btn_level4 = None
+        self.btn_level5 = None
+        self.btn_level6 = None
+        self.btn_cancel = None
+
+        self.preview_img = mm_logo
+
+    def render(self, screen):
+        super().render(screen)
+        screen.blit(self.preview_img,(50,50))
+
+    def setup_ui_elements(self, screen_w: int, screen_h: int, manager: UIManager):
+        super().setup_ui_elements(screen_w, screen_h, manager)
+        w,h=self.get_screen_size()
+
+        self.btn_level1 = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((screen_w - 225, h-70*7), (150, 50)),
+            text='Level 1',
+            manager=manager)
+        self.btn_level2 = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((screen_w - 225, h-70*6), (150, 50)),
+            text='Level 2',
+            manager=manager)
+        self.btn_level3 = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((screen_w - 225, h-70*5), (150, 50)),
+            text='Level 3',
+            manager=manager)
+        self.btn_level4 = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((screen_w - 225, h-70*4), (150, 50)),
+            text='Level 4',
+            manager=manager)
+        self.btn_level5 = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((screen_w - 225, h-70*3), (150, 50)),
+            text='Level 5',
+            manager=manager)
+        self.btn_level6 = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((screen_w - 225, h-70*2), (150, 50)),
+            text='Level 6',
+            manager=manager)
+        self.btn_cancel = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((screen_w - 225, h-70), (150, 50)),
+            text='Back',
+            manager=manager)
+
+    def on_ui_hovered_event(self, event, source):
+        w,h=self.get_screen_size()
+        scale = True
+        if source == self.btn_level1:
+            pr = level_preview_1
+        if source == self.btn_level2:
+            pr = level_preview_2
+        if source == self.btn_level3:
+            pr = level_preview_3
+        if source == self.btn_level4:
+            pr = level_preview_4
+        if source == self.btn_level5:
+            pr = level_preview_5
+        if source == self.btn_level6:
+            pr = level_preview_6
+        if source == self.btn_cancel:
+            pr = mm_logo
+            scale = False
+
+        imw,imh = pr.get_size()
+        distw =w - 225 - 50
+        disth =h - 50
+        distw=min(distw, imw)
+        disth=min(disth, imh)
+
+        pr = pr.subsurface(0,0,distw,disth)
+        if scale:
+            pr = pygame.transform.scale(pr,(int(distw*0.7),int(disth*0.7)))
+            ps, ph = pr.get_size()
+            bg = pygame.Surface((ps+10,ph+10))
+            bg.fill(white)
+            bg.blit(pr,(5,5))
+            pr=bg
+        self.preview_img=pr
+
+    def on_ui_input_event(self, event, source):
+        super().on_ui_input_event(event, source)
+
+        if source == self.btn_cancel:
+            self.game.to_main_menu()
+        if source == self.btn_level1:
+            self.game.next_screen = TransitionScreen(self.game,Level1(self.game))
+        if source == self.btn_level2:
+            self.game.next_screen = TransitionScreen(self.game,Level2(self.game))
+        if source == self.btn_level3:
+            self.game.next_screen = TransitionScreen(self.game,Level3(self.game))
+        if source == self.btn_level4:
+            self.game.next_screen = TransitionScreen(self.game,Level4(self.game))
+        if source == self.btn_level5:
+            self.game.next_screen = TransitionScreen(self.game,Level5(self.game))
+        if source == self.btn_level6:
+            self.game.next_screen = TransitionScreen(self.game,Level6(self.game))
+
 
 class MainMenuScreen(Screen):
     def __init__(self, game,parent_screen=None):
@@ -487,7 +613,7 @@ class MainMenuScreen(Screen):
             self.game.next_screen = Level0(self.game)
 
         if source == self.btn_select:
-            self.game.next_screen = Level0(self.game)
+            self.game.next_screen = LevelSelectScreen(self.game)
 
         if source == self.btn_continue:
             self.game.next_screen = self.parent_screen
@@ -940,17 +1066,17 @@ class BaseLevel(Screen):
         self.ordered_button_group.draw(screen)
 
         # Drawing Progressbars
-        for i in range(4):
-            bx = self.get_button_x(i)
-            progressbar_x = bx + 35
-            progressbar_w = 36*3
-            pygame.draw.rect(screen,black,(progressbar_x,h-bh-60,progressbar_w,36))
+        #for i in range(4):
+        #    bx = self.get_button_x(i)
+        #    progressbar_x = bx + 35
+        #    progressbar_w = 36*3
+        #    pygame.draw.rect(screen,black,(progressbar_x,h-bh-60,progressbar_w,36))
 
-            bt = self.active_button_queue[i]
-            p = 0.0
-            if bt is not None:
-                p = float(bt.get_countdown_progress())
-            pygame.draw.rect(screen,(255,0,0),(progressbar_x,h-bh-60,int(progressbar_w*p),36))
+        #    bt = self.active_button_queue[i]
+        #    p = 0.0
+        #    if bt is not None:
+        #        p = float(bt.get_countdown_progress())
+        #    pygame.draw.rect(screen,(255,0,0),(progressbar_x,h-bh-60,int(progressbar_w*p),36))
 
         # Drawing button holding background
         screen.blit(self.button_bg,(w/2-128*3, h-72*3))
@@ -970,8 +1096,8 @@ class BaseLevel(Screen):
         # Drawing hotkeys
         for i in range(4):
             bx = self.get_button_x(i)
-            hotkey_text = ui_font_24.render(str(i + 1), False, (0, 0, 0))
-            screen.blit(hotkey_text,(bx+5,h-bh-65))
+            hotkey_text = ui_font_24.render(hotkey_list[i], False, (0, 0, 0))
+            screen.blit(hotkey_text,(bx+5,h-bh-60))
 
         self.ui_group.draw(screen)
 
@@ -1359,7 +1485,6 @@ class Level6(BaseLevel):
         self.win_trigger = pymunk.BB(25*32,17*32,31*32,23*32)
         self.satellite_base.set_sprite_position(27*32,17*32-1)
 
-
         handler = self.physspace.add_collision_handler(collision_types["astronaut"], collision_types["collectible"])
         handler.pre_solve = self.collect
 
@@ -1371,6 +1496,7 @@ class Level6(BaseLevel):
 
     def get_signal_position(self):
         return self.satellite.position if not self.astronaut_state["has_sat"] else None
+
 
 class TransitionScreen(Screen):
 
