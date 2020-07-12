@@ -1232,7 +1232,7 @@ class Level5(BaseLevel):
 
         self.next_level = Level6
 
-        self.satellite, c = create_satellite_body(self.worldgroup, position=(35*32,15*32))
+        self.satellite, c = create_satellite_body(self.worldgroup, position=(40*32,15*32))
         self.physspace.add(self.satellite, c)
 
         self.astroidClose, close = create_asteroid_body(self.worldgroup, position=(30*32,1*32), velocity=(-25,100))
@@ -1245,6 +1245,8 @@ class Level5(BaseLevel):
         self.physspace.add(self.astroidFar, far)
         self.physspace.add(self.astroidVeryFar, veryFar)
 
+        self.physspace.add(create_asteroid_body(self.worldgroup, position=(19*32,1*32), velocity=(-25,100)))
+
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(22*32,16*32), velocity=(.3,.1), rotation=-0.7, angular_velocity=0.7))
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(30.8*32,16.2*32), velocity=(.1,-.1), rotation=1.5, angular_velocity=-0.2))
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(15.7*32,15.5*32), velocity=(.05,.1), rotation=2.3, angular_velocity=-0.1))
@@ -1252,7 +1254,7 @@ class Level5(BaseLevel):
         self.physspace.add(create_clutter_body(self.worldgroup, "wrench", position=(25.9*32,19*32)))
         self.physspace.add(create_clutter_body(self.worldgroup, "can", position=(23.5*32,14.2*32)))
         self.physspace.add(create_clutter_body(self.worldgroup, "platine", position=(15.8*32,9.8*32), velocity=(0,0), angular_velocity=0))
-        self.physspace.add(create_clutter_body(self.worldgroup, "cat", position=(20*32,8*32), velocity=(0, 20), angular_velocity=0.5))
+        self.physspace.add(create_clutter_body(self.worldgroup, "cat", position=(15*32,17*32), velocity=(0, 0), angular_velocity=0.5))
         self.win_trigger = pymunk.BB(10*32,12*32,16*32,18*32)
 
 
@@ -1276,7 +1278,7 @@ class Level5(BaseLevel):
         if self.check_out_of_bounds(self.astroidVeryFar):
             self.astroidVeryFar.position = (45*32,1*32)
             self.astroidVeryFar.velocity = (-25,80)
-        handler.pre_solve = self.collect
+
 
     def check_win_condition(self):
         return super().check_win_condition() and self.astronaut_state["has_sat"]
