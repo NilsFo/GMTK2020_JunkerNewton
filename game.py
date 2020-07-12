@@ -316,7 +316,7 @@ class Screen():
         # This function should be overwritten to determine UI elements
         pass
 
-    def set_screen_shake(self, duration_dt: int, magnitude: int):
+    def set_screen_shake(self, duration_dt: float, magnitude: int):
         self.screen_shake_timer = duration_dt
         self.screen_shake_magnitude = magnitude
 
@@ -365,7 +365,16 @@ class MainMenuScreen(Screen):
 
     def render(self, screen):
         super().render(screen)
-        screen.blit(mm_background,(0,0))
+        w,h = self.get_screen_size()
+        mw,mh = mm_background.get_size()
+        x=0
+        y=0
+        if w > mw:
+            x=w/2-mw/2
+        if h > mh:
+            y=h/2-mh/2
+
+        screen.blit(mm_background,(x,y))
 
     def on_game_startup(self):
         display_debug_message("Welcome to JUNKER NEWTON! THANKS FOR PLAYING!",time=20)
@@ -484,9 +493,11 @@ class BaseLevel(Screen):
 
         def collision(arbiter: pymunk.Arbiter, space, data):
             if arbiter.total_ke > 100000:
+                self.set_screen_shake(duration_dt=.5, magnitude=4)
                 if not mixer_bump_channel.get_busy():
                     mixer_bump_channel.play(snd_bump_hard)
             elif arbiter.total_ke > 20000:
+                self.set_screen_shake(duration_dt=.2, magnitude=1)
                 if not mixer_bump_channel.get_busy():
                     mixer_bump_channel.play(snd_bump_light)
 
@@ -548,7 +559,7 @@ class BaseLevel(Screen):
             if bt.expired:
                 display_debug_message('Button expired!')
                 self.on_control_button_pressed(i)
-                self.set_screen_shake(duration_dt=2, magnitude=2)
+                self.set_screen_shake(duration_dt=1, magnitude=2)
 
         if self.check_win_condition() and not self.level_won:
             self.level_won = True
@@ -645,7 +656,7 @@ class BaseLevel(Screen):
             self.astronaut_turn_backward(mag)
         if bt.type==2:
             self.astronaut_turn_forward(mag)
-        self.set_screen_shake(1,5)
+        #self.set_screen_shake(1,5)
 
         interpolator = interpolation.Smooth()
         bt.animate(Animation2D((0,0),(200,200),2,interpolation=interpolator))
