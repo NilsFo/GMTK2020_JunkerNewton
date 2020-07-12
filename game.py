@@ -473,7 +473,7 @@ class MainMenuScreen(Screen):
         print("A user input was made")
 
         if source == self.btn_story:
-            self.game.next_screen = TransitionScreen(self.game,Level0(self.game))
+            self.game.next_screen = TransitionScreen(self.game,Level5(self.game))
 
         if source == self.btn_select:
             self.game.next_screen = Level0(self.game)
@@ -1234,10 +1234,16 @@ class Level5(BaseLevel):
 
         self.satellite, c = create_satellite_body(self.worldgroup, position=(35*32,15*32))
         self.physspace.add(self.satellite, c)
-        self.physspace.add(create_asteroid_body(self.worldgroup, position=(37*32,2*32), velocity=(-45,50)))
-        self.physspace.add(create_asteroid_body(self.worldgroup, position=(26*32,26*32), velocity=(0, -30)))
-        self.physspace.add(create_asteroid_body(self.worldgroup, position=(15* 32,5*32), velocity=(30, 30)))
-        self.physspace.add(create_asteroid_body(self.worldgroup, position=(31*32,15*32), velocity=(-10, 0)))
+
+        self.astroidClose, close = create_asteroid_body(self.worldgroup, position=(30*32,1*32), velocity=(-25,100))
+        self.astroidMid, mid = create_asteroid_body(self.worldgroup, position=(35* 32,10*32), velocity=(-25, 75))
+        self.astroidFar, far = create_asteroid_body(self.worldgroup, position=(40* 32,20*32), velocity=(-25, 90))
+        self.astroidVeryFar, veryFar = create_asteroid_body(self.worldgroup, position=(45*25,2*32), velocity=(-25, 80))
+
+        self.physspace.add(self.astroidClose, close)
+        self.physspace.add(self.astroidMid, mid)
+        self.physspace.add(self.astroidFar, far)
+        self.physspace.add(self.astroidVeryFar, veryFar)
 
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(22*32,16*32), velocity=(.3,.1), rotation=-0.7, angular_velocity=0.7))
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(30.8*32,16.2*32), velocity=(.1,-.1), rotation=1.5, angular_velocity=-0.2))
@@ -1251,6 +1257,25 @@ class Level5(BaseLevel):
 
 
         handler = self.physspace.add_collision_handler(collision_types["astronaut"], collision_types["collectible"])
+        handler.pre_solve = self.collect
+
+    def update(self, dt):
+        super().update(dt)
+        if self.check_out_of_bounds(self.astroidClose):
+            self.astroidClose.position = (30*32,1*32)
+            self.astroidClose.velocity = (-25,100)
+
+        if self.check_out_of_bounds(self.astroidMid):
+            self.astroidMid.position = (35*32,1*32)
+            self.astroidMid.velocity = (-25,75)
+
+        if self.check_out_of_bounds(self.astroidFar):
+            self.astroidFar.position = (40*32,1*32)
+            self.astroidFar.velocity = (-25,90)
+
+        if self.check_out_of_bounds(self.astroidVeryFar):
+            self.astroidVeryFar.position = (45*32,1*32)
+            self.astroidVeryFar.velocity = (-25,80)
         handler.pre_solve = self.collect
 
     def check_win_condition(self):
