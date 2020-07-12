@@ -439,6 +439,8 @@ class BaseLevel(Screen):
 
         self.level_time = 0
         self.next_level_timer = 5
+        self.overlay_surface = pygame.Surface(self.get_screen_size())
+        self.overlay_surface.fill((0,0,0))
 
         self.sprite_timer = 0
         self.last_input = 0
@@ -604,7 +606,11 @@ class BaseLevel(Screen):
             pygame.draw.circle(surface, (0,180,0), self.world.translate_point(self.signal_source), self.signal_radius, width=2)
 
     def postprocess_render(self, screen):
-        pass
+        if self.level_won:
+            alpha = int((1-min(self.next_level_timer/5, 1)) * 255)
+            self.overlay_surface.set_alpha(alpha)
+            screen.blit(self.overlay_surface, (0,0))
+
 
     def on_mouse_release(self,event):
         if any(pygame.mouse.get_pressed()):
@@ -621,6 +627,9 @@ class BaseLevel(Screen):
         self.world.set_size(size)
         self.world.center(view_center)
         self.align_ui_buttons()
+
+        self.overlay_surface = pygame.Surface(self.get_screen_size())
+        self.overlay_surface.fill((0,0,0))
 
     def on_key_escape(self, event):
         super().on_key_escape(event)
@@ -778,6 +787,9 @@ class BaseLevel(Screen):
         for nl in nl:
             self.ordered_button_group.add(nl)
 
+
+    def get_signal_position(self):
+        return None
 
     def check_win_condition(self):
         return self.win_trigger.contains_vect(self.astronaut.position)
