@@ -70,6 +70,9 @@ img_wrench = pygame.image.load("assets/textures/wrench.png")
 img_platine = pygame.image.load("assets/textures/platine.png")
 img_can = pygame.image.load("assets/textures/can.png")
 img_cat = pygame.image.load("assets/textures/spacecat.png")
+img_sat = pygame.image.load("assets/textures/satellite.png")
+img_sat_base = pygame.image.load("assets/textures/satellite_catched1.png")
+img_sat_base_complete = pygame.image.load("assets/textures/satellite_catched.png")
 
 # LOADING ACTIVE BUTTONS
 btn_accelerate_img = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_speedup1.png")
@@ -508,6 +511,9 @@ class BaseLevel(Screen):
         self.astronaut_sprite_tl = img_astronaut_tl
 
         self.satellite: pymunk.Body = None
+        self.satellite_base = SatelliteBase()
+        self.satellite_base.set_sprite_position(12*32,12*32-1)
+        self.worldgroup.add(self.satellite_base)
 
         # Add physics from map tiles
         layer = "Collision"
@@ -560,6 +566,23 @@ class BaseLevel(Screen):
         self.spawn_next_button()
         self.spawn_next_button()
         self.align_ui_buttons()
+
+        def collect(arbiter, space, data):
+            collectible = arbiter.shapes[1]
+            space.remove(collectible, collectible.body)
+            associated_sprites = filter(lambda s: collectible in s.physbody.shapes,
+                                        filter(lambda s: isinstance(s, EntityRenderer), self.worldgroup.sprites()))
+            self.worldgroup.remove(*associated_sprites)
+            self.astronaut_state["has_sat"] = True
+            print(self.astronaut_state)
+
+            self.astronaut_sprite_normal = img_astronaut_sat
+            self.astronaut_sprite_tf = img_astronaut_tf_sat
+            self.astronaut_sprite_tr = img_astronaut_tr_sat
+            self.astronaut_sprite_tb = img_astronaut_tb_sat
+            self.astronaut_sprite_tl = img_astronaut_tl_sat
+            return False
+        self.collect = collect
 
     def load_map(self, map_id):
         self.map = load_pygame("assets/maps/" + map_id)
@@ -622,6 +645,8 @@ class BaseLevel(Screen):
         if self.check_out_of_bounds(self.satellite):
             self.satellite.velocity = (pymunk.Vec2d(self.map.width/2, self.map.height/2) - self.satellite.position).normalized() * 10
 
+
+
     def get_level_name(self):
         return ['Your level name here',-1]
 
@@ -629,7 +654,16 @@ class BaseLevel(Screen):
         display_debug_message("A winner is you!")
         t = TextSprite(["MISSION","ACCOMPLISHED"], ui_font_128)
         t.set_sprite_position(self.get_screen_size()[0]//2, self.get_screen_size()[1]//2, center=True)
+        t.rect.x = t._sprite_x
+        t.rect.y = t._sprite_y
         self.ui_group.add(t)
+
+        self.satellite_base.image = img_sat_base_complete
+        self.astronaut_sprite_normal = img_astronaut
+        self.astronaut_sprite_tf = img_astronaut_tf
+        self.astronaut_sprite_tr = img_astronaut_tr
+        self.astronaut_sprite_tb = img_astronaut_tb
+        self.astronaut_sprite_tl = img_astronaut_tl
 
         for bt in self.active_button_queue:
             if bt is not None:
@@ -977,24 +1011,10 @@ class Level0(BaseLevel):
         self.physspace.add(create_clutter_body(self.worldgroup, "platine", position=(15.8*32,9.8*32), velocity=(0,0), angular_velocity=0))
         self.physspace.add(create_clutter_body(self.worldgroup, "cat", position=(33*32,22*32), velocity=(-0.7, 0.1), angular_velocity=0.0))
         self.win_trigger = pymunk.BB(15*32,17*32,21*32,23*32)
-
-        def collect(arbiter, space, data):
-            collectible = arbiter.shapes[1]
-            space.remove(collectible, collectible.body)
-            associated_sprites = filter(lambda s: collectible in s.physbody.shapes, self.worldgroup.sprites())
-            self.worldgroup.remove(*associated_sprites)
-            self.astronaut_state["has_sat"] = True
-            print(self.astronaut_state)
-
-            self.astronaut_sprite_normal = img_astronaut_sat
-            self.astronaut_sprite_tf = img_astronaut_tf_sat
-            self.astronaut_sprite_tr = img_astronaut_tr_sat
-            self.astronaut_sprite_tb = img_astronaut_tb_sat
-            self.astronaut_sprite_tl = img_astronaut_tl_sat
-            return False
+        self.satellite_base.set_sprite_position(17*32,17*32-1)
 
         handler = self.physspace.add_collision_handler(collision_types["astronaut"], collision_types["collectible"])
-        handler.pre_solve = collect
+        handler.pre_solve = self.collect
 
     def check_win_condition(self):
         return super().check_win_condition() and self.astronaut_state["has_sat"]
@@ -1025,23 +1045,9 @@ class Level1(BaseLevel):
         self.physspace.add(create_clutter_body(self.worldgroup, "cat", position=(27*32,12*32), velocity=(-0.7, 0.1), angular_velocity=0.0))
         self.win_trigger = pymunk.BB(10*32,12*32,16*32,18*32)
 
-        def collect(arbiter, space, data):
-            collectible = arbiter.shapes[1]
-            space.remove(collectible, collectible.body)
-            associated_sprites = filter(lambda s: collectible in s.physbody.shapes, self.worldgroup.sprites())
-            self.worldgroup.remove(*associated_sprites)
-            self.astronaut_state["has_sat"] = True
-            print(self.astronaut_state)
-
-            self.astronaut_sprite_normal = img_astronaut_sat
-            self.astronaut_sprite_tf = img_astronaut_tf_sat
-            self.astronaut_sprite_tr = img_astronaut_tr_sat
-            self.astronaut_sprite_tb = img_astronaut_tb_sat
-            self.astronaut_sprite_tl = img_astronaut_tl_sat
-            return False
 
         handler = self.physspace.add_collision_handler(collision_types["astronaut"], collision_types["collectible"])
-        handler.pre_solve = collect
+        handler.pre_solve = self.collect
 
     def get_level_name(self):
         return ['An Object in Motion...',1]
@@ -1077,23 +1083,9 @@ class Level2(BaseLevel):
         self.physspace.add(create_clutter_body(self.worldgroup, "cat", position=(29*32,21*32), velocity=(-0.7, 0.1), angular_velocity=0.0))
         self.win_trigger = pymunk.BB(10*32,12*32,16*32,18*32)
 
-        def collect(arbiter, space, data):
-            collectible = arbiter.shapes[1]
-            space.remove(collectible, collectible.body)
-            associated_sprites = filter(lambda s: collectible in s.physbody.shapes, self.worldgroup.sprites())
-            self.worldgroup.remove(*associated_sprites)
-            self.astronaut_state["has_sat"] = True
-            print(self.astronaut_state)
-
-            self.astronaut_sprite_normal = img_astronaut_sat
-            self.astronaut_sprite_tf = img_astronaut_tf_sat
-            self.astronaut_sprite_tr = img_astronaut_tr_sat
-            self.astronaut_sprite_tb = img_astronaut_tb_sat
-            self.astronaut_sprite_tl = img_astronaut_tl_sat
-            return False
 
         handler = self.physspace.add_collision_handler(collision_types["astronaut"], collision_types["collectible"])
-        handler.pre_solve = collect
+        handler.pre_solve = self.collect
 
     def get_level_name(self):
         return ['Nils ist cool',2]
@@ -1131,23 +1123,9 @@ class Level3(BaseLevel):
 
         self.win_trigger = pymunk.BB(10*32,12*32,16*32,18*32)
 
-        def collect(arbiter, space, data):
-            collectible = arbiter.shapes[1]
-            space.remove(collectible, collectible.body)
-            associated_sprites = filter(lambda s: collectible in s.physbody.shapes, self.worldgroup.sprites())
-            self.worldgroup.remove(*associated_sprites)
-            self.astronaut_state["has_sat"] = True
-            print(self.astronaut_state)
-
-            self.astronaut_sprite_normal = img_astronaut_sat
-            self.astronaut_sprite_tf = img_astronaut_tf_sat
-            self.astronaut_sprite_tr = img_astronaut_tr_sat
-            self.astronaut_sprite_tb = img_astronaut_tb_sat
-            self.astronaut_sprite_tl = img_astronaut_tl_sat
-            return False
 
         handler = self.physspace.add_collision_handler(collision_types["astronaut"], collision_types["collectible"])
-        handler.pre_solve = collect
+        handler.pre_solve = self.collect
 
     def check_win_condition(self):
         return super().check_win_condition() and self.astronaut_state["has_sat"]
@@ -1181,23 +1159,9 @@ class Level4(BaseLevel):
         self.physspace.add(create_clutter_body(self.worldgroup, "cat", position=(30.5*32,21.5*32), velocity=(-0.7, 0.1), angular_velocity=0.0))
         self.win_trigger = pymunk.BB(10*32,12*32,16*32,18*32)
 
-        def collect(arbiter, space, data):
-            collectible = arbiter.shapes[1]
-            space.remove(collectible, collectible.body)
-            associated_sprites = filter(lambda s: collectible in s.physbody.shapes, self.worldgroup.sprites())
-            self.worldgroup.remove(*associated_sprites)
-            self.astronaut_state["has_sat"] = True
-            print(self.astronaut_state)
-
-            self.astronaut_sprite_normal = img_astronaut_sat
-            self.astronaut_sprite_tf = img_astronaut_tf_sat
-            self.astronaut_sprite_tr = img_astronaut_tr_sat
-            self.astronaut_sprite_tb = img_astronaut_tb_sat
-            self.astronaut_sprite_tl = img_astronaut_tl_sat
-            return False
 
         handler = self.physspace.add_collision_handler(collision_types["astronaut"], collision_types["collectible"])
-        handler.pre_solve = collect
+        handler.pre_solve = self.collect
 
     def check_win_condition(self):
         return super().check_win_condition() and self.astronaut_state["has_sat"]
@@ -1232,23 +1196,9 @@ class Level5(BaseLevel):
         self.physspace.add(create_clutter_body(self.worldgroup, "cat", position=(20*32,8*32), velocity=(0, 20), angular_velocity=0.5))
         self.win_trigger = pymunk.BB(10*32,12*32,16*32,18*32)
 
-        def collect(arbiter, space, data):
-            collectible = arbiter.shapes[1]
-            space.remove(collectible, collectible.body)
-            associated_sprites = filter(lambda s: collectible in s.physbody.shapes, self.worldgroup.sprites())
-            self.worldgroup.remove(*associated_sprites)
-            self.astronaut_state["has_sat"] = True
-            print(self.astronaut_state)
-
-            self.astronaut_sprite_normal = img_astronaut_sat
-            self.astronaut_sprite_tf = img_astronaut_tf_sat
-            self.astronaut_sprite_tr = img_astronaut_tr_sat
-            self.astronaut_sprite_tb = img_astronaut_tb_sat
-            self.astronaut_sprite_tl = img_astronaut_tl_sat
-            return False
 
         handler = self.physspace.add_collision_handler(collision_types["astronaut"], collision_types["collectible"])
-        handler.pre_solve = collect
+        handler.pre_solve = self.collect
 
     def check_win_condition(self):
         return super().check_win_condition() and self.astronaut_state["has_sat"]
@@ -1281,24 +1231,11 @@ class Level6(BaseLevel):
         self.physspace.add(create_clutter_body(self.worldgroup, "platine", position=(8*32,18*32), velocity=(0,0), angular_velocity=0))
         self.physspace.add(create_clutter_body(self.worldgroup, "cat", position=(22*32,10*32), velocity=(0, 0), angular_velocity=2))
         self.win_trigger = pymunk.BB(25*32,17*32,31*32,23*32)
+        self.satellite_base.set_sprite_position(27*32,17*32-1)
 
-        def collect(arbiter, space, data):
-            collectible = arbiter.shapes[1]
-            space.remove(collectible, collectible.body)
-            associated_sprites = filter(lambda s: collectible in s.physbody.shapes, self.worldgroup.sprites())
-            self.worldgroup.remove(*associated_sprites)
-            self.astronaut_state["has_sat"] = True
-            print(self.astronaut_state)
-
-            self.astronaut_sprite_normal = img_astronaut_sat
-            self.astronaut_sprite_tf = img_astronaut_tf_sat
-            self.astronaut_sprite_tr = img_astronaut_tr_sat
-            self.astronaut_sprite_tb = img_astronaut_tb_sat
-            self.astronaut_sprite_tl = img_astronaut_tl_sat
-            return False
 
         handler = self.physspace.add_collision_handler(collision_types["astronaut"], collision_types["collectible"])
-        handler.pre_solve = collect
+        handler.pre_solve = self.collect
 
     def get_level_name(self):
         return ['Levelllllllll',3]
@@ -1693,6 +1630,13 @@ class AnimatedEntity(Sprite):
 
     def animate(self, animation: Animation2D):
         self.animations.append(animation)
+
+class SatelliteBase(AnimatedEntity):
+    def __init__(self, *groups):
+        super().__init__(*groups)
+        self._layer = 3
+        self.image = img_sat_base
+        self.rect = self.image.get_rect()
 
 class ControlButton(AnimatedEntity):
 
