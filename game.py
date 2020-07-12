@@ -64,6 +64,8 @@ img_astronaut_tl_sat = pygame.image.load("assets/textures/astronaut/astronaut-tl
 img_astronaut_tr = pygame.image.load("assets/textures/astronaut/astronaut-tr.png")
 img_astronaut_tr_sat = pygame.image.load("assets/textures/astronaut/astronaut-tr-sat.png")
 
+img_crate = pygame.image.load("assets/textures/Crate.png")
+img_sixpack = pygame.image.load("assets/textures/Sixpack.png")
 img_meteor = pygame.image.load("assets/textures/meteor.png")
 img_beer = pygame.image.load("assets/textures/beer.png")
 img_wrench = pygame.image.load("assets/textures/wrench.png")
@@ -1006,6 +1008,10 @@ def create_clutter_body(group, clutter_type="beer", position=(0,0), rotation=0.0
         img = img_platine
     elif clutter_type == "can":
         img = img_can
+    elif clutter_type == "crate":
+        img = img_crate
+    elif clutter_type == "sixpack":
+        img = img_sixpack
     elif clutter_type == "cat":
         img = img_cat
     c = pymunk.Poly.create_box(clutter, (img.get_width(), img.get_height()))
