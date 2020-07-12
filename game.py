@@ -44,6 +44,7 @@ ui_font_15 = pygame.font.Font(gmtk_font, 15)
 ui_font_18 = pygame.font.Font(gmtk_font, 18)
 ui_font_21 = pygame.font.Font(gmtk_font, 21)
 ui_font_24 = pygame.font.Font(gmtk_font, 24)
+ui_font_32 = pygame.font.Font(gmtk_font, 32)
 ui_font_48 = pygame.font.Font(gmtk_font, 48)
 ui_font_64 = pygame.font.Font(gmtk_font, 64)
 ui_font_72 = pygame.font.Font(gmtk_font, 72)
@@ -64,9 +65,9 @@ img_astronaut_tr = pygame.image.load("assets/textures/astronaut/astronaut-tr.png
 img_astronaut_tr_sat = pygame.image.load("assets/textures/astronaut/astronaut-tr-sat.png")
 
 # LOADING ACTIVE BUTTONS
-btn_accelerate_img = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_down1.png")
+btn_accelerate_img = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_speedup1.png")
 btn_accelerate_img = pygame.transform.scale(btn_accelerate_img, np.array(btn_accelerate_img.get_size()) * 3)
-btn_decelerate_img = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_up1.png")
+btn_decelerate_img = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_speeddown1.png")
 btn_decelerate_img = pygame.transform.scale(btn_decelerate_img, np.array(btn_decelerate_img.get_size()) * 3)
 btn_left_img = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_left1.png")
 btn_left_img = pygame.transform.scale(btn_left_img, np.array(btn_left_img.get_size()) * 3)
@@ -74,17 +75,28 @@ btn_right_img = pygame.image.load("assets" + os.sep + "textures" + os.sep + "but
 btn_right_img = pygame.transform.scale(btn_right_img, np.array(btn_right_img.get_size()) * 3)
 
 # LOADING DISABLED BUTTONS
-btn_accelerate_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_down2.png")
+btn_accelerate_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_speedup3.png")
 btn_accelerate_img_disabled = pygame.transform.scale(btn_accelerate_img_disabled, np.array(btn_accelerate_img_disabled.get_size()) * 3)
-btn_decelerate_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_up2.png")
+btn_decelerate_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_speeddown3.png")
 btn_decelerate_img_disabled = pygame.transform.scale(btn_decelerate_img_disabled, np.array(btn_decelerate_img_disabled.get_size()) * 3)
-btn_left_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_left2.png")
+btn_left_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_left3.png")
 btn_left_img_disabled = pygame.transform.scale(btn_left_img_disabled, np.array(btn_left_img_disabled.get_size()) * 3)
-btn_right_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_right2.png")
+btn_right_img_disabled = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_right3.png")
 btn_right_img_disabled = pygame.transform.scale(btn_right_img_disabled, np.array(btn_right_img_disabled.get_size()) * 3)
 
+
+# LOADING DISABLED BUTTONS
+btn_accelerate_img_pressed = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_speedup2.png")
+btn_accelerate_img_pressed = pygame.transform.scale(btn_accelerate_img_pressed, np.array(btn_accelerate_img_pressed.get_size()) * 3)
+btn_decelerate_img_pressed = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_speeddown2.png")
+btn_decelerate_img_pressed = pygame.transform.scale(btn_decelerate_img_pressed, np.array(btn_decelerate_img_pressed.get_size()) * 3)
+btn_left_img_pressed = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_left2.png")
+btn_left_img_pressed = pygame.transform.scale(btn_left_img_pressed, np.array(btn_left_img_pressed.get_size()) * 3)
+btn_right_img_pressed = pygame.image.load("assets" + os.sep + "textures" + os.sep + "button" + os.sep + "btn_rot_right2.png")
+btn_right_img_pressed = pygame.transform.scale(btn_right_img_pressed, np.array(btn_right_img_pressed.get_size()) * 3)
+
 # Credits
-f = open("assets/credits.txt")
+f = open("assets/credits.txt",encoding='UTF-8')
 credits = f.readlines()
 f.close()
 
@@ -101,6 +113,12 @@ snd_jet2.set_volume(0.2)
 
 pygame.mixer.set_num_channels(2)
 mixer_bump_channel = pygame.mixer.Channel(1)
+
+dank_lore = ["It is the year 2187.",
+             "Space is crawling with lost and wracked satellites and space junk.",
+             "Some have made themselves salvagers of the future and sweep up the orbits.",
+             "Unfortunately, space is an unforgiving environment, wearing out equipment and posing obstacles at every turn.",
+             "So grab a beer and wrack some junk."]
 
 class Game:
     def __init__(self, screen):
@@ -178,8 +196,8 @@ class Game:
             pygame.display.flip()
             dt = clock.tick_busy_loop(MAX_FPS) / 1000
 
-    def to_main_menu(self, first_start: bool = False):
-        mn = MainMenuScreen(game)
+    def to_main_menu(self, first_start: bool = False,parent_screen=None):
+        mn = MainMenuScreen(game,parent_screen=parent_screen)
         self.next_screen = mn
 
         if first_start:
@@ -353,16 +371,17 @@ class Screen():
         return self.game.screen.get_size()
 
 class MainMenuScreen(Screen):
-    def __init__(self, game):
-        super().__init__(game)
+    def __init__(self, game,parent_screen=None):
+        super().__init__(game,parent_screen)
 
         self.btn_story = None
         self.btn_select = None
+        self.btn_continue = None
         self.credit_lines = []
 
         for line in credits:
             print(line)
-            self.credit_lines.append(ui_font_18.render(line, True, (255, 255, 255)))
+            self.credit_lines.append(ui_font_18.render(line[:-1], True, (255, 255, 255)))
 
     def render(self, screen):
         super().render(screen)
@@ -399,22 +418,30 @@ class MainMenuScreen(Screen):
 
         self.btn_story = pygame_gui.elements.UIButton(
             relative_rect=pygame.Rect((screen_w - 225, 50), (160, 90)),
-            text='Story Mode',
+            text='New Game',
             manager=manager)
         self.btn_select = pygame_gui.elements.UIButton(
             relative_rect=pygame.Rect((screen_w - 225, 150), (160, 90)),
             text='Level Select',
             manager=manager)
+        if self.parent_screen is not None:
+            self.btn_continue = pygame_gui.elements.UIButton(
+                relative_rect=pygame.Rect((screen_w - 225, 250), (160, 90)),
+                text='Continue',
+                manager=manager)
 
     def on_ui_input_event(self, event, source):
         super().on_ui_input_event(event, source)
         print("A user input was made")
 
         if source == self.btn_story:
-            self.game.next_screen = Level1(self.game)
+            self.game.next_screen = TransitionScreen(self.game,Level1(self.game))
 
         if source == self.btn_select:
             self.game.next_screen = Level1(self.game)
+
+        if source == self.btn_continue:
+            self.game.next_screen = self.parent_screen
 
 
 class BaseLevel(Screen):
@@ -578,7 +605,8 @@ class BaseLevel(Screen):
             self.next_level_timer -= dt
 
             if self.next_level_timer <= 0 and self.next_level is not None:
-                self.game.next_screen = self.next_level(game)
+                lv = self.next_level(game)
+                self.game.next_screen = TransitionScreen(self.game,lv)
 
         if self.check_out_of_bounds(self.astronaut):
             self.game.next_screen = GameOverScreen(self.game, self.astronaut_state["has_sat"], self.__class__)
@@ -586,6 +614,9 @@ class BaseLevel(Screen):
         # Send the satellite back if its OOB
         if self.check_out_of_bounds(self.satellite):
             self.satellite.velocity = (pymunk.Vec2d(self.map.width/2, self.map.height/2) - self.satellite.position).normalized() * 10
+
+    def get_level_name(self):
+        return ['Your level name here',-1]
 
     def level_win(self):
         display_debug_message("A winner is you!")
@@ -639,7 +670,7 @@ class BaseLevel(Screen):
 
     def on_key_escape(self, event):
         super().on_key_escape(event)
-        self.game.to_main_menu()
+        self.game.to_main_menu(parent_screen=self)
 
     def on_key_press(self, event):
         if debug_mode:
@@ -958,6 +989,9 @@ class Level1(BaseLevel):
         handler = self.physspace.add_collision_handler(collision_types["astronaut"], collision_types["collectible"])
         handler.pre_solve = collect
 
+    def get_level_name(self):
+        return ['An Object in Motion...',1]
+
     def check_win_condition(self):
         return super().check_win_condition() and self.astronaut_state["has_sat"]
 
@@ -1006,6 +1040,9 @@ class Level2(BaseLevel):
 
         handler = self.physspace.add_collision_handler(collision_types["astronaut"], collision_types["collectible"])
         handler.pre_solve = collect
+
+    def get_level_name(self):
+        return ['Nils ist cool',2]
 
     def check_win_condition(self):
         return super().check_win_condition() and self.astronaut_state["has_sat"]
@@ -1209,11 +1246,62 @@ class Level6(BaseLevel):
         handler = self.physspace.add_collision_handler(collision_types["astronaut"], collision_types["collectible"])
         handler.pre_solve = collect
 
+    def get_level_name(self):
+        return ['Levelllllllll',3]
+
     def check_win_condition(self):
         return super().check_win_condition() and self.astronaut_state["has_sat"]
 
     def get_signal_position(self):
         return self.satellite.position if not self.astronaut_state["has_sat"] else None
+
+class TransitionScreen(Screen):
+
+    def __init__(self, game,next_screen,duration_dt = 7,text=None,subtitle=None, parent_screen=None):
+        super().__init__(game, parent_screen)
+        self.updates_target = duration_dt
+        self.updates_current = 0
+        self.next_screen=next_screen
+
+        if isinstance(next_screen,BaseLevel):
+            text,index= next_screen.get_level_name()
+            subtitle = 'Level '+str(index)
+
+        if subtitle is None:
+            subtitle = ''
+        if text is None:
+            text = ''
+
+        self.ui_group = pygame.sprite.Group()
+        self.title_text = TextSprite(text,ui_font_64,self.ui_group)
+        self.sub_title_text = TextSprite(subtitle,ui_font_32,self.ui_group)
+        self.click_text = TextSprite('Press any key to start.',ui_font_21,self.ui_group)
+
+    def update(self, dt):
+        super().update(dt)
+        w,h = self.get_screen_size()
+
+        self.ui_group.update(dt)
+        self.title_text.rect.center = (w/2,h/2-80)
+        self.sub_title_text.rect.center = (w/2,h/2+50)
+        self.click_text.rect.center = (w/2,h-50)
+
+        #self.updates_current+=dt
+        # Never update, because there is no auto timer anymore
+        if self.updates_current >= self.updates_target:
+            self.game.next_screen = self.next_screen
+
+    def on_mouse_release(self, event):
+        super().on_mouse_release(event)
+        self.updates_current=self.updates_target
+
+    def on_key_press(self, event):
+        super().on_key_press(event)
+        self.updates_current=self.updates_target
+
+    def render_ui(self, screen):
+        super().render_ui(screen)
+        self.ui_group.draw(screen)
 
 class GameOverScreen(Screen):
     def __init__(self, game, has_sat=False, reset_level:typing.ClassVar[BaseLevel]=Level1):
@@ -1680,9 +1768,11 @@ def main():
     game.setup()
     print("Finished loading")
 
-    game.current_screen = MainMenuScreen(game)
+    mn =  MainMenuScreen(game)
+    intro_trans = TransitionScreen(game,text=None,subtitle=dank_lore,next_screen=mn)
+    game.current_screen =intro_trans
     game.current_screen.on_screen_enter()
-    game.current_screen.on_game_startup()
+    #game.current_screen.on_game_startup()
 
     print("Starting Game Loop")
     game.game_loop()
