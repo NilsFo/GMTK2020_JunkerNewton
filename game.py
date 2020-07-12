@@ -1181,6 +1181,8 @@ class Level3(BaseLevel):
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(17*32,15*32), velocity=(.5, -.1),angular_velocity=0.5))
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(17*32,16*32), velocity=(-.5,-.1),angular_velocity=-0.57))
         self.physspace.add(create_clutter_body(self.worldgroup, "beer", position=(17*32,17*32), velocity=(-.7,-.1),angular_velocity=0.2))
+        self.physspace.add(create_clutter_body(self.worldgroup, "sixpack", position=(4*32,5*32), velocity=(7, -.1),angular_velocity=0.9))
+        self.physspace.add(create_clutter_body(self.worldgroup, "crate", position=(12*32,23*32), velocity=(.5, -.1),angular_velocity=0.5))
         self.physspace.add(create_clutter_body(self.worldgroup, "wrench", position=(15*32,14*32)))
         self.physspace.add(create_clutter_body(self.worldgroup, "wrench", position=(16*32,5*32)))
         self.physspace.add(create_clutter_body(self.worldgroup, "can", position=(19.5*32,17.2*32)))
