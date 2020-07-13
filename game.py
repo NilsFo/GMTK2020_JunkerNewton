@@ -19,10 +19,10 @@ from interpolation import *
 
 pygame.init()
 
-debug_mode = True
+debug_mode = False
 
 MAX_FPS = 60
-screen_width = 1500
+screen_width = 1750
 screen_height = floor(screen_width / (16 / 9))
 _update_time = 1.0 / 60.0
 key_escape = 27
@@ -247,14 +247,15 @@ class Game:
             self.current_screen.render_ui(self.screen)
 
             # Showing debug messages
-            fps_surface = self.debug_font.render('FPS: '+str(clock.get_fps()), True, (255, 255, 255))
-            fw, fh = fps_surface.get_size()
-            self.screen.blit(fps_surface, (5, 5))
+            #fps_surface = self.debug_font.render('FPS: '+str(clock.get_fps()), True, (255, 255, 255))
+            #fw, fh = fps_surface.get_size()
+            #self.screen.blit(fps_surface, (5, 5))
+            fh = self.debug_font.get_height()
 
             message_list = get_all_debug_messages()
             for i in range(len(message_list)):
                 msg = message_list[i]
-                self.screen.blit(self.debug_font.render(msg, True, (255, 255, 255)), (5, fh * (i+1)))
+                self.screen.blit(self.debug_font.render(msg, True, (255, 255, 255)), (5, fh * (i)))
             debug_messages_apply_delta_time(dt)
 
             pygame.display.flip()
@@ -590,8 +591,8 @@ class MainMenuScreen(Screen):
     def render_ui(self, screen):
         super().render_ui(screen)
         w,h = self.get_screen_size()
-        start_x = w-350
-        start_y = h-525
+        start_x = w-400
+        start_y = h-700
 
         i = 0
         for line in self.credit_lines:

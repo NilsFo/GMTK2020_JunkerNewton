@@ -1,2 +1,0 @@
-bh_visualization.jpg:
-	Credit: NASA’s Goddard Space Flight Center/Jeremy Schnittman
